@@ -33,12 +33,6 @@
 - **Impact Metrics Integration:** Integrates with Ecologi APIs to display real-time impact metrics, showcasing the environmental contributions of your NFT sales.
 - **Uses the #ZeroContract version 1 for 1/1 NFTs, and Version 2 for multiple editions, created by @JestemZero on X.**
 
-## Demo
-
-![SaveTheWorldWithArt.io Demo](frontend/public/demo-screenshot.png)
-
-*Screenshot showcasing the platform's dashboard and NFT management interface.*
-
 ## Technologies
 
 - **Frontend:**

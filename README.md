@@ -1,70 +1,199 @@
-# Getting Started with Create React App
+# SaveTheWorldWithArt.io
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+**SaveTheWorldWithArt.io** is a cutting-edge, web-based platform that empowers artists to create, manage, deploy, and mint NFTs directly on the Tezos blockchain. By ensuring that all art and provenance data are stored fully on-chain, SaveTheWorldWithArt.io eliminates the need for third-party storage solutions like IPFS or Arweave, providing an immutable and seamless experience for artists and collectors alike.
 
-## Available Scripts
+## Table of Contents
 
-In the project directory, you can run:
+- [Features](#features)
+- [Demo](#demo)
+- [Technologies](#technologies)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Running the Application](#running-the-application)
+- [Usage](#usage)
+  - [Connecting Your Wallet](#connecting-your-wallet)
+  - [Deploying a Smart Contract](#deploying-a-smart-contract)
+  - [Minting NFTs](#minting-nfts)
+  - [Managing NFTs](#managing-nfts)
+- [API Integration](#api-integration)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
 
-### `npm start`
+## Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Fully On-Chain NFT Management:** Create and store NFT metadata directly on the Tezos blockchain without relying on external storage services.
+- **User-Friendly Interface:** Intuitive, no-code platform designed for artists to effortlessly deploy and manage their NFT collections.
+- **Seamless Blockchain Interactions:** Leverages Taquito and Beacon Wallet for smooth and secure interactions with the Tezos blockchain.
+- **Multi-Edition Support:** Supports both single-edition (v1) and multiple-edition (v2) NFT contracts, allowing flexibility in your NFT offerings.
+- **Real-Time Impact Metrics:** Integrates with Ecologi APIs to display live impact metrics, showcasing the environmental contributions of your NFT sales.
+- **Comprehensive Contract Management:** Easily deploy, mint, burn, transfer, and manage NFT contracts without the need for external tools like Better Call Dev.
+- **Impact Metrics Integration:** Integrates with Ecologi APIs to display real-time impact metrics, showcasing the environmental contributions of your NFT sales.
+- **Uses the #ZeroContract version 1 for 1/1 NFTs, and Version 2 for multiple editions, created by @JestemZero on X.**
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Demo
 
-### `npm test`
+![SaveTheWorldWithArt.io Demo](frontend/public/demo-screenshot.png)
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+*Screenshot showcasing the platform's dashboard and NFT management interface.*
 
-### `npm run build`
+## Technologies
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- **Frontend:**
+  - React.js
+  - Material-UI (MUI)
+  - Styled-Components
+- **Blockchain:**
+  - Tezos Blockchain
+  - Taquito Library
+  - Beacon Wallet
+- **APIs:**
+  - Ecologi API for impact metrics
+- **Development Tools:**
+  - Node.js
+  - npm
+  - Visual Studio Code
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Folder Overview
 
-### `npm run eject`
+- **public/contracts/**: Contains the Michelson smart contract files (`FOC.tz`) used for deploying NFT contracts.
+- **src/components/**: Houses all React components, including those for minting, burning, transferring NFTs, and managing contracts.
+- **src/contexts/**: Contains the `WalletContext.js` for managing wallet connections and interactions.
+- **src/utils/**: Utility functions and API integrations, such as `ecologiApi.js` for fetching impact metrics.
+- **src/**: Core application files, including routing (`App.js`), styling (`App.css`), and entry point (`index.js`).
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Getting Started
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Prerequisites
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Ensure you have the following installed on your machine:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- **Node.js** (v14 or later)
+- **npm** (v6 or later)
+- **Visual Studio Code** or any preferred code editor
+- **Tezos Wallet** (e.g., Temple Wallet) for interacting with the platform
 
-## Learn More
+### Installation
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+1. **Clone the Repository**
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+   ```bash
+   git clone https://github.com/yourusername/SaveTheWorldWithArt-frontend.git
+   cd SaveTheWorldWithArt/frontend
 
-### Code Splitting
+### Install Dependencies
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+bash
+Copy code
+npm install
+Configure Environment Variables
 
-### Analyzing the Bundle Size
+Create a .env file in the frontend directory and add any necessary environment variables (if applicable).
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### Running the Application
+Start the development server:
 
-### Making a Progressive Web App
+bash
+Copy code
+npm start
+Open http://localhost:3000 in your browser to view the application.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### Usage
+Connecting Your Wallet
+Click on the Connect Wallet button in the header.
+Select Beacon Wallet and approve the connection.
+Ensure you're connected to the desired network (mainnet or ghostnet).
+Deploying a Smart Contract
+Navigate to the Deploy Contract section.
+Fill in the required details, including:
+NFT Collection Name
+Symbol
+Description
+Authors and their Tezos addresses
+Upload a thumbnail image (under 20KB)
+Review the metadata preview.
+Click Deploy Contract to initiate the deployment process.
+Once deployed, your contract address will be displayed. Save this address for future interactions.
+### Minting NFTs
+Go to the Mint NFT section.
+Select your deployed contract.
+Fill in the NFT details:
+Name
+Description
+Upload the artifact file (must be under 20KB)
+Royalties (0-10%)
+License information
+Attributes (optional)
+Tags (optional)
+Recipient Tezos address
+Amount (for v2 contracts)
+Review and confirm the minting details.
+Click Mint NFT to execute the transaction.
+### Managing NFTs
+Burn NFTs: Remove unwanted NFTs from circulation.
+Transfer NFTs: Send NFTs to other Tezos addresses.
+Update Operators: Grant or revoke operator permissions for managing your NFTs.
+Balance Of: Check the NFT balance for a specific address and token ID.
 
-### Advanced Configuration
+### API Integration
+SaveTheWorldWithArt.io integrates with the Ecologi API to display real-time impact metrics, such as:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+Total Trees Planted
+Total Carbon Offset
+These metrics showcase the environmental contributions of @jams2blues NFT sales, aligning with the platform's mission to support sustainability.  Add my business wallet as a collaborator to your NFTs! tz1R4Uj4gtJZYZjFBiRejTZU63RvQpRXAQXs, A portion of all royalties going to this wallet will be donated to Ecologi.
 
-### Deployment
+### Fetching Impact Metrics
+Located in src/utils/ecologiApi.js, the platform fetches data using Axios:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+javascript
+Copy code
+import axios from 'axios';
 
-### `npm run build` fails to minify
+const API_BASE_URL = 'https://public.ecologi.com/users';
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+export const getTotalTrees = async (username) => {
+  // Implementation...
+};
+
+export const getTotalCarbonOffset = async (username) => {
+  // Implementation...
+};
+
+export const getTotalImpact = async (username) => {
+  // Implementation...
+};
+Contributing
+Contributions are welcome! Please follow these steps:
+
+Fork the Repository
+
+Create a Feature Branch
+
+bash
+Copy code
+git checkout -b feature/YourFeature
+Commit Your Changes
+
+bash
+Copy code
+git commit -m "Add YourFeature"
+Push to the Branch
+
+bash
+Copy code
+git push origin feature/YourFeature
+Open a Pull Request
+
+Provide a clear description of your changes and reference any related issues.
+
+## License
+Distributed under the MIT License. See LICENSE for more information.
+
+### Acknowledgments
+Taquito: The TypeScript library for interacting with the Tezos blockchain.
+Beacon Wallet: Simplifies Tezos wallet connections.
+Ecologi: For providing impactful environmental metrics.
+@JestemZero and @jams2blues: For their invaluable contributions to smart contract development and the Art-Tezos Ecosystem.

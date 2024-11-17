@@ -43,7 +43,7 @@ const FileUpload = ({ setArtifactData }) => {
       />
       <label htmlFor="collection-thumbnail-upload">
         <Button variant="contained" component="span" style={{ marginTop: '10px' }}>
-          Upload Collection Thumbnail *
+          Upload Collection Thumbnail, Under 20KB! *
         </Button>
       </label>
 

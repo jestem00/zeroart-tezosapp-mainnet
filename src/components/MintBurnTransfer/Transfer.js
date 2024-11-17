@@ -1,4 +1,4 @@
-// src/components/MintBurnTransfer/Transfer.js
+// frontend/src/components/MintBurnTransfer/Transfer.js
 
 import React, { useState } from 'react';
 import {
@@ -9,7 +9,7 @@ import {
   Grid,
 } from '@mui/material';
 
-const Transfer = ({ contractAddress, Tezos, setSnackbar }) => {
+const Transfer = ({ contractAddress, Tezos, setSnackbar, contractVersion }) => {
   const [fromAddress, setFromAddress] = useState('');
   const [toAddress, setToAddress] = useState('');
   const [tokenId, setTokenId] = useState('');
@@ -25,6 +25,18 @@ const Transfer = ({ contractAddress, Tezos, setSnackbar }) => {
     try {
       setLoading(true);
       const contract = await Tezos.wallet.at(contractAddress);
+
+      const amountValue = parseInt(amount);
+      if (isNaN(amountValue) || amountValue <= 0) {
+        setSnackbar({
+          open: true,
+          message: 'Amount must be a positive integer.',
+          severity: 'warning',
+        });
+        setLoading(false);
+        return;
+      }
+
       const transferParams = [
         {
           from_: fromAddress,
@@ -32,11 +44,12 @@ const Transfer = ({ contractAddress, Tezos, setSnackbar }) => {
             {
               to_: toAddress,
               token_id: parseInt(tokenId),
-              amount: parseInt(amount),
+              amount: amountValue,
             },
           ],
         },
       ];
+
       const op = await contract.methods.transfer(transferParams).send();
       await op.confirmation();
 
@@ -46,7 +59,7 @@ const Transfer = ({ contractAddress, Tezos, setSnackbar }) => {
       setTokenId('');
       setAmount('1');
     } catch (error) {
-      console.error('Error transferring NFT:', error);
+      // Removed console.error for production
       setSnackbar({ open: true, message: 'Transfer failed.', severity: 'error' });
     } finally {
       setLoading(false);

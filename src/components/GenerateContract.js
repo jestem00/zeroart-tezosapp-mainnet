@@ -18,10 +18,11 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogContentText,
+  DialogContentText, // Import DialogContentText
   DialogActions,
   Checkbox,
   FormControlLabel,
+  Link,
 } from '@mui/material';
 import { WalletContext } from '../contexts/WalletContext';
 import NFTPreview from './NFTPreview';
@@ -74,14 +75,14 @@ const getByteSize = (dataUri) => {
 };
 
 // Constants for Metadata Keys
-const TEZOS_STORAGE_CONTENT_KEY = "tezos-storage:content";
-const TEZOS_STORAGE_CONTENT_HEX = stringToHex(TEZOS_STORAGE_CONTENT_KEY); // "74657a6f732d73746f726167653a636f6e74656e74"
+const TEZOS_STORAGE_CONTENT_KEY = 'tezos-storage:content';
+const TEZOS_STORAGE_CONTENT_HEX = stringToHex(TEZOS_STORAGE_CONTENT_KEY);
 
-const CONTENT_KEY = "content";
+const CONTENT_KEY = 'content';
 
 const GenerateContract = () => {
   // Context and State Variables
-  const { Tezos, isWalletConnected, walletAddress } = useContext(WalletContext);
+  const { Tezos, isWalletConnected, walletAddress, network } = useContext(WalletContext);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -92,54 +93,49 @@ const GenerateContract = () => {
     type: 'art',
     imageUri: '',
     agreeToTerms: false,
+    contractVersion: 'v1',
   });
   const [formErrors, setFormErrors] = useState({});
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
   const [contractAddress, setContractAddress] = useState('');
   const [deploying, setDeploying] = useState(false);
-  const [modifiedFOCtz, setModifiedFOCtz] = useState('');
+  const [modifiedMichelsonCode, setModifiedMichelsonCode] = useState('');
   const [confirmDialog, setConfirmDialog] = useState({ open: false, data: null });
+  const [contractDialogOpen, setContractDialogOpen] = useState(false); // New state for contract dialog
 
-  // Michelson Code URL
-  const MICHELSON_URL = '/contracts/FOC.tz';
+  // Michelson Code URLs
+  const MICHELSON_URLS = {
+    v1: '/contracts/FOC.tz',
+    v2: '/contracts/nft_editions.tz',
+  };
   const [michelsonCode, setMichelsonCode] = useState('');
 
-  // Define the symbol validation regex at the top
+  // Define the symbol validation regex
   const symbolPattern = /^[A-Za-z0-9]{3,5}$/;
 
   // Fetch and Prepare Michelson Code
   useEffect(() => {
     const fetchMichelson = async () => {
       try {
-        const response = await fetch(MICHELSON_URL);
+        const response = await fetch(MICHELSON_URLS[formData.contractVersion]);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         let code = await response.text();
 
-        // Ensure walletAddress is defined
         if (!walletAddress) {
           throw new Error('Wallet address is undefined.');
         }
 
-        // Ensure that the placeholder __ADMIN_ADDRESS__ exists in FOC.tz
-        if (!code.includes('__ADMIN_ADDRESS__')) {
-          throw new Error('Michelson code does not contain the placeholder __ADMIN_ADDRESS__.');
+        if (formData.contractVersion === 'v1') {
+          if (!code.includes('__ADMIN_ADDRESS__')) {
+            throw new Error('Michelson code does not contain the placeholder __ADMIN_ADDRESS__.');
+          }
+          const cleanWalletAddress = walletAddress.replace(/^"|"$/g, '');
+          code = code.replace(/"__ADMIN_ADDRESS__"/g, `"${cleanWalletAddress}"`);
         }
 
-        // Clean the walletAddress by removing any surrounding quotes
-        const cleanWalletAddress = walletAddress.replace(/^"|"$/g, '');
-        console.log('Clean Wallet Address:', cleanWalletAddress);
-
-        // Perform replacement of the quoted placeholder with the clean wallet address wrapped in quotes
-        const updatedCode = code.replace(/"__ADMIN_ADDRESS__"/g, `"${cleanWalletAddress}"`);
-        setMichelsonCode(updatedCode);
-        console.log('Michelson code updated with admin address:', updatedCode);
-
-        // Verify that replacement was successful
-        if (!updatedCode.includes(cleanWalletAddress)) {
-          throw new Error('Admin address replacement failed.');
-        }
+        setMichelsonCode(code);
       } catch (error) {
         console.error('Error fetching Michelson code:', error);
         setSnackbar({ open: true, message: 'Failed to load Michelson code.', severity: 'error' });
@@ -150,9 +146,9 @@ const GenerateContract = () => {
     if (isWalletConnected && walletAddress) {
       fetchMichelson();
     } else {
-      setMichelsonCode(''); // Clear Michelson code if not connected
+      setMichelsonCode('');
     }
-  }, [MICHELSON_URL, walletAddress, isWalletConnected]);
+  }, [MICHELSON_URLS, walletAddress, isWalletConnected, formData.contractVersion]);
 
   // Handle Input Changes
   const handleInputChange = (e) => {
@@ -182,7 +178,7 @@ const GenerateContract = () => {
       case 'description':
         if (!value) {
           errors.description = 'Description is required.';
-        } else if (value.length > 250) { // OBJKT.com constraint
+        } else if (value.length > 250) {
           errors.description = 'Description cannot exceed 250 characters.';
         } else {
           delete errors.description;
@@ -209,12 +205,11 @@ const GenerateContract = () => {
         } else if (value.length > 200) {
           errors.creators = 'Creator(s) cannot exceed 200 characters.';
         } else {
-          const creatorsArray = value.split(',').map(a => a.trim()).filter(a => a !== '');
+          const creatorsArray = value.split(',').map((a) => a.trim()).filter((a) => a !== '');
           const uniqueCreators = new Set(creatorsArray);
           if (uniqueCreators.size !== creatorsArray.length) {
             errors.creators = 'Duplicate creators detected.';
           } else {
-            // Validate each creator address
             for (let addr of creatorsArray) {
               if (!isValidTezosAddress(addr)) {
                 errors.creators = `Invalid Tezos address detected: ${addr}`;
@@ -232,8 +227,9 @@ const GenerateContract = () => {
           errors.imageUri = 'Image URI is required.';
         } else {
           const byteSize = getByteSize(value);
-          if (byteSize > 20000) { // 20KB
-            errors.imageUri = 'Image URI must be under 20KB. OBJKT and other platforms may not display thumbnails if it’s too long. Test on Ghostnet first, and compress your image to keep it tiny.';
+          if (byteSize > 20000) {
+            errors.imageUri =
+              'Image URI must be under 20KB. OBJKT and other platforms may not display thumbnails if it’s too long. Test on Ghostnet first, and compress your image to keep it tiny.';
           } else {
             delete errors.imageUri;
           }
@@ -260,35 +256,31 @@ const GenerateContract = () => {
     const fields = Object.keys(formData);
     let valid = true;
 
-    // Validate each field
-    fields.forEach(field => {
+    fields.forEach((field) => {
       validateField(field, formData[field]);
       if (formErrors[field]) {
         valid = false;
       }
     });
 
-    // Additional validation to ensure authors and authorAddresses count match
-    const authors = formData.authors.split(',').map(a => a.trim()).filter(a => a !== '');
-    const authorAddresses = formData.authorAddresses.split(',').map(a => a.trim()).filter(a => a !== '');
+    const authors = formData.authors.split(',').map((a) => a.trim()).filter((a) => a !== '');
+    const authorAddresses = formData.authorAddresses.split(',').map((a) => a.trim()).filter((a) => a !== '');
 
     if (authors.length !== authorAddresses.length) {
-      setFormErrors(prev => ({
+      setFormErrors((prev) => ({
         ...prev,
         authorAddresses: 'Number of authors and author addresses must match.',
       }));
       valid = false;
     } else {
-      // Remove the error if counts match
-      setFormErrors(prev => {
+      setFormErrors((prev) => {
         const { authorAddresses, ...rest } = prev;
         return rest;
       });
     }
 
-    // Check if terms are agreed
     if (!formData.agreeToTerms) {
-      setFormErrors(prev => ({
+      setFormErrors((prev) => ({
         ...prev,
         agreeToTerms: 'You must agree to the terms and conditions.',
       }));
@@ -322,11 +314,11 @@ const GenerateContract = () => {
       const metadataObj = {
         name: name,
         description: description,
-        interfaces: ["TZIP-012", "TZIP-016"],
-        authors: authors.split(',').map(author => author.trim()).filter(a => a !== ''),
-        authoraddress: authorAddresses.split(',').map(addr => addr.trim()).filter(a => a !== ''),
+        interfaces: ['TZIP-012', 'TZIP-016'],
+        authors: authors.split(',').map((author) => author.trim()).filter((a) => a !== ''),
+        authoraddress: authorAddresses.split(',').map((addr) => addr.trim()).filter((a) => a !== ''),
         symbol: symbol,
-        creators: creators.split(',').map(creator => creator.trim()).filter(a => a !== ''),
+        creators: creators.split(',').map((creator) => creator.trim()).filter((a) => a !== ''),
         type: type,
         imageUri: imageUri,
       };
@@ -340,7 +332,7 @@ const GenerateContract = () => {
   useEffect(() => {
     const generateContract = async () => {
       if (!validateForm()) {
-        setModifiedFOCtz('');
+        setModifiedMichelsonCode('');
         return;
       }
 
@@ -349,18 +341,12 @@ const GenerateContract = () => {
           throw new Error('Michelson code is not set.');
         }
 
-        // Log for debugging
-        console.log('Original Michelson Code:', michelsonCode);
-
-        // Set the modified FOC.tz code
-        setModifiedFOCtz(michelsonCode);
-
+        setModifiedMichelsonCode(michelsonCode);
         setSnackbar({ open: true, message: 'Contract generated successfully.', severity: 'success' });
-        console.log('Modified FOC.tz code:', michelsonCode);
       } catch (error) {
         console.error('Error generating contract:', error);
         setSnackbar({ open: true, message: 'Error generating contract. Please try again.', severity: 'error' });
-        setModifiedFOCtz('');
+        setModifiedMichelsonCode('');
       }
     };
 
@@ -370,12 +356,13 @@ const GenerateContract = () => {
 
   // Handle Copy Contract
   const handleCopyContract = () => {
-    if (!modifiedFOCtz) {
+    if (!modifiedMichelsonCode) {
       setSnackbar({ open: true, message: 'Please generate the contract first.', severity: 'warning' });
       return;
     }
 
-    navigator.clipboard.writeText(modifiedFOCtz)
+    navigator.clipboard
+      .writeText(modifiedMichelsonCode)
       .then(() => {
         setSnackbar({ open: true, message: 'Contract copied to clipboard!', severity: 'success' });
       })
@@ -402,7 +389,7 @@ const GenerateContract = () => {
       return;
     }
 
-    if (!modifiedFOCtz) {
+    if (!modifiedMichelsonCode) {
       setSnackbar({ open: true, message: 'Please generate the contract first.', severity: 'warning' });
       return;
     }
@@ -431,49 +418,58 @@ const GenerateContract = () => {
         symbol: formData.symbol,
         creators: formData.creators.split(',').map((creator) => creator.trim()).filter((a) => a !== ''),
         type: formData.type,
-        imageUri: formData.imageUri, // Ensure this is a Data URI
+        imageUri: formData.imageUri,
       };
 
-      // Minify JSON and encode
       const jsonString = JSON.stringify(metadataObj);
       const metadataHex = Buffer.from(jsonString).toString('hex');
 
-      // Initialize metadata big_map with correct string keys
       const metadataMap = new MichelsonMap();
-      // Correctly set the "" key to "tezos-storage:content" (without space)
-      metadataMap.set('', TEZOS_STORAGE_CONTENT_HEX); // Key: "", Value: "tezos-storage:content" as bytes
-      // Set the "content" key with hex-encoded JSON metadata
-      metadataMap.set(CONTENT_KEY, metadataHex); // Key: "content", Value: hex-encoded JSON
+      metadataMap.set('', TEZOS_STORAGE_CONTENT_HEX);
+      metadataMap.set(CONTENT_KEY, metadataHex);
 
-      // Initialize other big_maps
       const ledgerMap = new MichelsonMap();
       const operatorsMap = new MichelsonMap();
       const tokenMetadataMap = new MichelsonMap();
 
-      // Construct the storage object as per Michelson storage type
-      const storage = {
-        admin: walletAddress, // address
-        ledger: ledgerMap, // big_map nat address
-        metadata: metadataMap, // big_map string bytes
-        next_token_id: 0, // nat
-        operators: operatorsMap, // big_map (pair address (pair address nat)) unit
-        token_metadata: tokenMetadataMap, // big_map nat (pair nat (map string bytes))
-      };
+      let storage;
 
-      // Originate the contract using Taquito's Wallet API
+      if (formData.contractVersion === 'v1') {
+        storage = {
+          admin: walletAddress,
+          ledger: ledgerMap,
+          metadata: metadataMap,
+          next_token_id: 0,
+          operators: operatorsMap,
+          token_metadata: tokenMetadataMap,
+        };
+      } else if (formData.contractVersion === 'v2') {
+        storage = {
+          admin: walletAddress, // address
+          all_tokens: 0, // nat
+          children: [], // set(address)
+          ledger: ledgerMap, // big_map
+          metadata: metadataMap, // big_map
+          next_token_id: 0, // nat
+          operators: operatorsMap, // big_map
+          parents: [], // set(address)
+          paused: false, // bool
+          token_metadata: tokenMetadataMap, // big_map
+          total_supply: new MichelsonMap(), // big_map(nat, nat)
+        };
+      }
+
       const originationOp = await Tezos.wallet
         .originate({
-          code: modifiedFOCtz, // Pass Michelson code as a string
-          storage: storage, // Michelson storage object with MichelsonMap
+          code: modifiedMichelsonCode,
+          storage: storage,
         })
         .send();
 
       setSnackbar({ open: true, message: 'Awaiting confirmation...', severity: 'info' });
 
-      // Await confirmation
       await originationOp.confirmation();
 
-      // Retrieve the contract instance
       const contract = await originationOp.contract();
       const contractAddr = contract.address;
 
@@ -484,6 +480,7 @@ const GenerateContract = () => {
           message: `Contract deployed at ${contractAddr}`,
           severity: 'success',
         });
+        setContractDialogOpen(true); // Open the contract dialog
 
         // Store the deployed contract in localStorage for management
         const storedContracts = JSON.parse(localStorage.getItem('deployedContracts')) || [];
@@ -532,23 +529,41 @@ const GenerateContract = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
+  // Handle Close Contract Dialog
+  const handleCloseContractDialog = () => {
+    setContractDialogOpen(false);
+  };
+
   // Real-Time Validation for Authors and Author Addresses
   useEffect(() => {
-    const authors = formData.authors.split(',').map(a => a.trim()).filter(a => a !== '');
-    const authorAddresses = formData.authorAddresses.split(',').map(a => a.trim()).filter(a => a !== '');
+    const authors = formData.authors.split(',').map((a) => a.trim()).filter((a) => a !== '');
+    const authorAddresses = formData.authorAddresses.split(',').map((a) => a.trim()).filter((a) => a !== '');
 
     if (authors.length !== authorAddresses.length) {
-      setFormErrors(prev => ({
+      setFormErrors((prev) => ({
         ...prev,
         authorAddresses: 'Number of authors and author addresses must match.',
       }));
     } else {
-      setFormErrors(prev => {
+      setFormErrors((prev) => {
         const { authorAddresses, ...rest } = prev;
         return rest;
       });
     }
   }, [formData.authors, formData.authorAddresses]);
+
+  // Handle Before Unload Event to Warn User
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (contractAddress && !contractDialogOpen) {
+        e.preventDefault();
+        e.returnValue = 'You have not copied your contract address. Are you sure you want to leave this page?';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [contractAddress, contractDialogOpen]);
 
   return (
     <Container elevation={3}>
@@ -559,14 +574,34 @@ const GenerateContract = () => {
         NFT Collection Contract
       </Typography>
       <Typography variant="body1" gutterBottom align="center">
-        Ready to mint your NFTs fully on-chain? Just fill in the details below, and we’ll handle the metadata magic, swapping in your info and wallet address before deploying it on Tezos with Taquito. Big thanks to @jestemZero’s clever #ZeroContract and @jams2blues for the late nights – powered by sheer willpower and love.
+        Ready to mint your NFTs fully on-chain? Just fill in the details below, and we’ll handle the metadata magic, swapping in your info and wallet address before deploying it on Tezos with Taquito. Big thanks to{' '}
+        <Link
+          href="https://x.com/JestemZero"
+          target="_blank"
+          rel="noopener noreferrer"
+          color="primary"
+          underline="hover"
+        >
+          @JestemZero
+        </Link>
+        ’s clever #ZeroContract and{' '}
+        <Link
+          href="https://x.com/jams2blues"
+          target="_blank"
+          rel="noopener noreferrer"
+          color="primary"
+          underline="hover"
+        >
+          @jams2blues
+        </Link>{' '}
+        for the late nights – powered by sheer willpower and love.
       </Typography>
 
       {/* Liability Disclaimer */}
       <Section>
         <Alert severity="warning">
           <Typography variant="body2">
-            <strong>Disclaimer:</strong> By deploying contracts and NFTs via this platform, you accept full responsibility for your on-chain actions. On Tezos, contracts are immutable and cannot be deleted or altered once deployed. Save The World With Art™ holds no liability for any content you create or deploy. Always test thoroughly on Ghostnet before deploying to mainnet, as all actions are final and permanent.
+            <strong>Disclaimer:</strong> By deploying contracts and NFTs via this platform, you accept full responsibility for your on-chain actions. On Tezos, contracts are immutable and cannot be deleted or altered once deployed. Save The World With Art™ holds no liability for any content you create or deploy. Always test thoroughly on Ghostnet before deploying to mainnet, as all actions are final and permanent. ⚠️ OBJKT might not display Collection Thumbnails over 254 Characters, so make em' teeny tiny!
           </Typography>
         </Alert>
       </Section>
@@ -587,6 +622,28 @@ const GenerateContract = () => {
         </Typography>
         <form noValidate autoComplete="off">
           <Grid container spacing={2}>
+            {/* Contract Version Selection */}
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel id="contract-version-label">Contract Version *</InputLabel>
+                <Select
+                  labelId="contract-version-label"
+                  id="contract-version-select"
+                  name="contractVersion"
+                  value={formData.contractVersion}
+                  label="Contract Version *"
+                  onChange={handleInputChange}
+                >
+                  <MenuItem value="v1">
+                    #ZeroContract v1 - 1/1 NFTs Only
+                  </MenuItem>
+                  <MenuItem value="v2">
+                    #ZeroContract v2 - Can Mint Multiple Editions
+                  </MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
             {/* NFT Collection Name */}
             <Grid item xs={12} sm={6}>
               <TextField
@@ -641,7 +698,7 @@ const GenerateContract = () => {
                 placeholder="Provide a brief description of your NFT collection."
                 required
                 inputProps={{
-                  maxLength: 250, // OBJKT.com constraint
+                  maxLength: 250,
                 }}
                 helperText={`${formData.description.length}/250 characters`}
                 error={!!formErrors.description}
@@ -760,7 +817,15 @@ const GenerateContract = () => {
                     color="primary"
                   />
                 }
-                label={<span>I agree to the <a href="/terms" target="_blank" rel="noopener noreferrer">Terms and Conditions</a>.</span>}
+                label={
+                  <span>
+                    I agree to the{' '}
+                    <a href="/terms" target="_blank" rel="noopener noreferrer">
+                      Terms and Conditions
+                    </a>
+                    .
+                  </span>
+                }
               />
               {formErrors.agreeToTerms && (
                 <Typography variant="caption" color="error">
@@ -790,7 +855,7 @@ const GenerateContract = () => {
                   variant="outlined"
                   color="primary"
                   onClick={handleCopyContract}
-                  disabled={!modifiedFOCtz}
+                  disabled={!modifiedMichelsonCode}
                 >
                   Copy Contract
                 </Button>
@@ -805,7 +870,7 @@ const GenerateContract = () => {
                   variant="contained"
                   color="primary"
                   onClick={handleDeployContract}
-                  disabled={deploying || !modifiedFOCtz || Object.keys(formErrors).length > 0}
+                  disabled={deploying || !modifiedMichelsonCode || Object.keys(formErrors).length > 0}
                   startIcon={deploying && <CircularProgress size={20} />}
                 >
                   {deploying ? 'Deploying...' : 'Deploy Contract'}
@@ -834,8 +899,81 @@ const GenerateContract = () => {
           >
             Copy Contract Address
           </Button>
+          <Typography variant="body2" style={{ marginTop: '10px' }}>
+            Please check your contract on{' '}
+            <a
+              href={`https://better-call.dev/${network}/${contractAddress}/operations`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Better Call Dev
+            </a>{' '}
+            or{' '}
+            <a
+              href={`https://${network === 'mainnet' ? '' : 'ghostnet.'}objkt.com/collections/${contractAddress}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              OBJKT.com
+            </a>{' '}
+            to verify your contract.
+          </Typography>
         </Section>
       )}
+
+      {/* Contract Address Dialog */}
+      <Dialog
+        open={contractDialogOpen}
+        onClose={(event, reason) => {
+          if (reason && (reason === 'backdropClick' || reason === 'escapeKeyDown')) {
+            // Do nothing to prevent closing
+            return;
+          }
+          handleCloseContractDialog();
+        }}
+        aria-labelledby="contract-dialog-title"
+        aria-describedby="contract-dialog-description"
+      >
+        <DialogTitle id="contract-dialog-title">Your Contract Address</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            Your contract has been successfully deployed. Please copy and save your contract address.
+          </Typography>
+          <Preformatted>{contractAddress}</Preformatted>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => navigator.clipboard.writeText(contractAddress)}
+            style={{ marginTop: '10px' }}
+          >
+            Copy Contract Address
+          </Button>
+          <Typography variant="body2" style={{ marginTop: '10px' }}>
+            You can also view your contract on{' '}
+            <a
+              href={`https://better-call.dev/${network}/${contractAddress}/operations`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Better Call Dev
+            </a>{' '}
+            or{' '}
+            <a
+              href={`https://${network === 'mainnet' ? '' : 'ghostnet.'}objkt.com/collections/${contractAddress}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              OBJKT.com
+            </a>
+            .
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseContractDialog} color="primary">
+            I have saved it
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Confirmation Dialog */}
       <Dialog

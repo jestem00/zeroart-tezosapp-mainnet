@@ -47,7 +47,7 @@ const Header = () => {
         <Logo style={{ height: '40px', width: '40px', marginRight: '15px' }} />
       </Link>
       <Typography variant="h6" style={{ flexGrow: 1 }}>
-        Save The World With Art™
+        Save The World With Art™ Beta
       </Typography>
         <StyledLink to="/">
           <Button color="inherit">Home</Button>

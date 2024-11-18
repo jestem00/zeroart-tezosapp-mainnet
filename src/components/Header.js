@@ -6,8 +6,6 @@ import {
   Toolbar,
   Typography,
   Button,
-  Menu,
-  MenuItem,
   Snackbar,
   Alert,
 } from '@mui/material';
@@ -15,9 +13,7 @@ import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { WalletContext } from '../contexts/WalletContext';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
-import LanguageIcon from '@mui/icons-material/Language';
-import { ReactComponent as Logo } from '../logo.svg'; // Ensure the path is correct
-import { NETWORKS } from '../config/networkConfig'; // Import NETWORKS
+import { ReactComponent as Logo } from '../logo.svg';
 
 const StyledLink = styled(Link)`
   text-decoration: none;
@@ -31,45 +27,10 @@ const Header = () => {
     isWalletConnected,
     connectWallet,
     disconnectWallet,
-    network,
-    switchNetwork,
+    tezos,
   } = useContext(WalletContext);
 
-  const [anchorEl, setAnchorEl] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
-
-  const handleNetworkClick = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleNetworkClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleNetworkChange = async (selectedNetwork) => {
-    if (selectedNetwork === network) {
-      setSnackbar({ open: true, message: `Already connected to ${capitalize(selectedNetwork)}.`, severity: 'info' });
-      handleNetworkClose();
-      return;
-    }
-
-    try {
-      // If wallet is connected, disconnect it before switching networks
-      if (isWalletConnected) {
-        await disconnectWallet();
-        setSnackbar({ open: true, message: `Disconnected from ${capitalize(network)}. Switching to ${capitalize(selectedNetwork)}.`, severity: 'info' });
-      }
-
-      // Switch network in context
-      await switchNetwork(selectedNetwork);
-      setSnackbar({ open: true, message: `Switched to ${capitalize(selectedNetwork)}. Please reconnect your wallet.`, severity: 'success' });
-    } catch (error) {
-      console.error('Network Change Error:', error);
-      setSnackbar({ open: true, message: `Network Change Error: ${error.message || 'Unknown error'}`, severity: 'error' });
-    }
-
-    handleNetworkClose();
-  };
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
@@ -96,21 +57,6 @@ const Header = () => {
           <StyledLink to="/mint-burn-transfer">
             <Button color="inherit">Mint/Burn/Transfer</Button>
           </StyledLink>
-          <Button color="inherit" onClick={handleNetworkClick} startIcon={<LanguageIcon />}>
-            {capitalize(network)}
-          </Button>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleNetworkClose}
-          >
-            {/* List available networks */}
-            {Object.keys(NETWORKS).map((net) => (
-              <MenuItem key={net} onClick={() => handleNetworkChange(net)}>
-                {capitalize(net)}
-              </MenuItem>
-            ))}
-          </Menu>
           {!isWalletConnected ? (
             <Button color="inherit" onClick={connectWallet} startIcon={<AccountBalanceWalletIcon />}>
               Connect Wallet

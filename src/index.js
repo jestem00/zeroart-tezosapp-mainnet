@@ -15,6 +15,7 @@ import { WalletProvider } from './contexts/WalletContext'; // Import WalletProvi
 // Setup globals after imports
 window.Buffer = Buffer;
 window.process = process;
+
 // Suppress specific warnings
 const originalConsoleError = console.error;
 console.error = (...args) => {
@@ -23,6 +24,7 @@ console.error = (...args) => {
   }
   originalConsoleError.apply(console, args);
 };
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>

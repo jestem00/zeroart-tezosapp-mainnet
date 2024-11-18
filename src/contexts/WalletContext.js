@@ -4,6 +4,7 @@ import React, { createContext, useState, useEffect, useCallback, useRef } from '
 import { BeaconWallet } from '@taquito/beacon-wallet';
 import { TezosToolkit } from '@taquito/taquito';
 import { NETWORKS } from '../config/networkConfig';
+import { BeaconEvent } from '@airgap/beacon-sdk';
 
 // Create the Wallet Context
 export const WalletContext = createContext();
@@ -12,27 +13,21 @@ export const WalletContext = createContext();
 export const WalletProvider = ({ children }) => {
   const [walletAddress, setWalletAddress] = useState('');
   const [isWalletConnected, setIsWalletConnected] = useState(false);
-  const [network, setNetwork] = useState('mainnet'); // Default to mainnet
+  const [network] = useState('mainnet'); // Fixed to mainnet
   const [tezos, setTezos] = useState(null);
   
   // Using ref to store BeaconWallet instance to prevent multiple instances
   const beaconWalletRef = useRef(null);
 
-  // Initialize BeaconWallet and TezosToolkit whenever network changes
+  // Initialize BeaconWallet and TezosToolkit on mount
   useEffect(() => {
     const initializeWallet = async () => {
       try {
         console.log(`Initializing wallet for network: ${network}`);
         const networkConfig = NETWORKS[network];
 
-        // Initialize BeaconWallet only if not already initialized for the current network
-        if (!beaconWalletRef.current || beaconWalletRef.current.preferredNetwork !== networkConfig.type) {
-          // If a different BeaconWallet instance exists, clear it
-          if (beaconWalletRef.current) {
-            await beaconWalletRef.current.clearActiveAccount();
-            console.log('Cleared previous BeaconWallet active account.');
-          }
-
+        // Initialize BeaconWallet only if not already initialized
+        if (!beaconWalletRef.current) {
           const beaconWallet = new BeaconWallet({
             name: 'SaveTheWorldWithArt.io',
             preferredNetwork: networkConfig.type,
@@ -59,6 +54,14 @@ export const WalletProvider = ({ children }) => {
           } else {
             console.log('No active account found during initialization.');
           }
+
+          // Subscribe to BeaconWallet events
+          beaconWallet.on(BeaconEvent.ACTIVE_ACCOUNT_SET, async () => {
+            const userAddress = await beaconWallet.getPKH();
+            setWalletAddress(userAddress);
+            setIsWalletConnected(!!userAddress);
+            console.log(`BeaconEvent.ACTIVE_ACCOUNT_SET: Wallet account set to ${userAddress}`);
+          });
         } else {
           console.log('BeaconWallet already initialized for the current network.');
         }
@@ -153,31 +156,6 @@ export const WalletProvider = ({ children }) => {
     };
   }, [isWalletConnected, walletAddress]);
 
-  // Effect to handle network switching and re-initialize wallet
-  useEffect(() => {
-    if (isWalletConnected) {
-      // Disconnect the wallet before re-initializing with new network
-      disconnectWallet();
-    }
-    // The wallet will be re-initialized due to the network change
-  }, [network, isWalletConnected, disconnectWallet]);
-
-  // Function to switch networks
-  const switchNetwork = async (newNetwork) => {
-    if (!NETWORKS[newNetwork]) {
-      console.error(`Network "${newNetwork}" is not defined in networkConfig.js`);
-      return;
-    }
-
-    if (newNetwork === network) {
-      console.warn(`Already connected to ${newNetwork}.`);
-      return;
-    }
-
-    console.log(`Switching network from ${network} to ${newNetwork}...`);
-    setNetwork(newNetwork);
-  };
-
   return (
     <WalletContext.Provider
       value={{
@@ -186,7 +164,6 @@ export const WalletProvider = ({ children }) => {
         connectWallet,
         disconnectWallet,
         network,
-        switchNetwork, // Expose the switchNetwork function
         tezos,
       }}
     >

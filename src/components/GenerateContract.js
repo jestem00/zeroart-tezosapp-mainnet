@@ -1,5 +1,3 @@
-// src/components/GenerateContract.js
-
 import React, { useState, useEffect, useContext } from 'react';
 import styled from 'styled-components';
 import {
@@ -18,7 +16,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogContentText, // Import DialogContentText
+  DialogContentText,
   DialogActions,
   Checkbox,
   FormControlLabel,
@@ -103,11 +101,6 @@ const GenerateContract = () => {
   const [confirmDialog, setConfirmDialog] = useState({ open: false, data: null });
   const [contractDialogOpen, setContractDialogOpen] = useState(false); // New state for contract dialog
 
-  // Michelson Code URLs
-  const MICHELSON_URLS = {
-    v1: '/contracts/FOC.tz',
-    v2: '/contracts/nft_editions.tz',
-  };
   const [michelsonCode, setMichelsonCode] = useState('');
 
   // Define the symbol validation regex
@@ -117,6 +110,11 @@ const GenerateContract = () => {
   useEffect(() => {
     const fetchMichelson = async () => {
       try {
+        const MICHELSON_URLS = {
+          v1: '/contracts/FOC.tz',
+          v2: '/contracts/nft_editions.tz',
+        };
+
         const response = await fetch(MICHELSON_URLS[formData.contractVersion]);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -148,7 +146,7 @@ const GenerateContract = () => {
     } else {
       setMichelsonCode('');
     }
-  }, [MICHELSON_URLS, walletAddress, isWalletConnected, formData.contractVersion]);
+  }, [walletAddress, isWalletConnected, formData.contractVersion]);
 
   // Handle Input Changes
   const handleInputChange = (e) => {
@@ -901,21 +899,25 @@ const GenerateContract = () => {
           </Button>
           <Typography variant="body2" style={{ marginTop: '10px' }}>
             Please check your contract on{' '}
-            <a
+            <Link
               href={`https://better-call.dev/${network}/${contractAddress}/operations`}
               target="_blank"
               rel="noopener noreferrer"
+              color="primary"
+              underline="hover"
             >
               Better Call Dev
-            </a>{' '}
+            </Link>{' '}
             or{' '}
-            <a
+            <Link
               href={`https://${network === 'mainnet' ? '' : 'ghostnet.'}objkt.com/collections/${contractAddress}`}
               target="_blank"
               rel="noopener noreferrer"
+              color="primary"
+              underline="hover"
             >
               OBJKT.com
-            </a>{' '}
+            </Link>{' '}
             to verify your contract.
           </Typography>
         </Section>
@@ -950,21 +952,21 @@ const GenerateContract = () => {
           </Button>
           <Typography variant="body2" style={{ marginTop: '10px' }}>
             You can also view your contract on{' '}
-            <a
+            <Link
               href={`https://better-call.dev/${network}/${contractAddress}/operations`}
               target="_blank"
               rel="noopener noreferrer"
             >
               Better Call Dev
-            </a>{' '}
+            </Link>{' '}
             or{' '}
-            <a
+            <Link
               href={`https://${network === 'mainnet' ? '' : 'ghostnet.'}objkt.com/collections/${contractAddress}`}
               target="_blank"
               rel="noopener noreferrer"
             >
               OBJKT.com
-            </a>
+            </Link>
             .
           </Typography>
         </DialogContent>

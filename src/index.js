@@ -10,17 +10,27 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import PasswordProtect from './PasswordProtect'; // Import the PasswordProtect component
+import { WalletProvider } from './contexts/WalletContext'; // Import WalletProvider
 
 // Setup globals after imports
 window.Buffer = Buffer;
 window.process = process;
-
+// Suppress specific warnings
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  if (/React Router Future Flag Warning/.test(args[0])) {
+    return;
+  }
+  originalConsoleError.apply(console, args);
+};
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <PasswordProtect>
-      <App />
-    </PasswordProtect>
+    <WalletProvider>
+      <PasswordProtect>
+        <App />
+      </PasswordProtect>
+    </WalletProvider>
   </React.StrictMode>
 );
 

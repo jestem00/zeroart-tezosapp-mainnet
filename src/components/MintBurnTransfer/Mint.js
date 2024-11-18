@@ -1,7 +1,7 @@
 // frontend/src/components/MintBurnTransfer/Mint.js
 
 import React, { useState, useContext, useEffect } from 'react';
-import styled from 'styled-components'; // Import styled-components
+import styled from 'styled-components';
 import {
   Typography,
   TextField,
@@ -10,7 +10,7 @@ import {
   Grid,
   FormControlLabel,
   Checkbox,
-  Link, // Import Link from MUI
+  Link,
   Select,
   MenuItem,
   InputLabel,
@@ -22,7 +22,7 @@ import MintUpload from './MintUpload';
 import { Buffer } from 'buffer';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
-import { WalletContext } from '../../contexts/WalletContext'; // Adjust the import path as necessary
+import { WalletContext } from '../../contexts/WalletContext';
 
 // Styled Components
 const Section = styled.div`
@@ -403,8 +403,7 @@ const Mint = ({ contractAddress, Tezos, setSnackbar, contractVersion }) => {
         );
       }
 
-      // Get MIME type from file
-      const mimeType = artifactFile.type;
+      // Removed 'mimeType' as it's unused to fix ESLint warning
 
       const contract = await Tezos.wallet.at(contractAddress);
 

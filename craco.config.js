@@ -49,8 +49,8 @@ module.exports = {
           rule => rule.use && rule.use.loader === 'source-map-loader'
         );
         if (sourceMapLoaderRule) {
-          // Exclude @walletconnect and all @airgap packages from source-map-loader
-          sourceMapLoaderRule.exclude = /@walletconnect\/|@airgap\/beacon-types\/|@airgap\/beacon-utils\/|@airgap\/beacon-core\/|@airgap\/beacon-dapp\/|@airgap\/beacon-transport-matrix\/|@airgap\/beacon-transport-postmessage\/|@airgap\/beacon-transport-walletconnect\//;
+          // Exclude @walletconnect and all @airgap/beacon-* packages from source-map-loader
+          sourceMapLoaderRule.exclude = /@walletconnect\/|@airgap\/beacon-.+\//;
         }
       }
 
@@ -60,25 +60,7 @@ module.exports = {
           module: /@walletconnect/,
         },
         {
-          module: /@airgap\/beacon-types/,
-        },
-        {
-          module: /@airgap\/beacon-utils/,
-        },
-        {
-          module: /@airgap\/beacon-core/,
-        },
-        {
-          module: /@airgap\/beacon-dapp/,
-        },
-        {
-          module: /@airgap\/beacon-transport-matrix/,
-        },
-        {
-          module: /@airgap\/beacon-transport-postmessage/,
-        },
-        {
-          module: /@airgap\/beacon-transport-walletconnect/,
+          module: /@airgap\/beacon-.+/,
         },
         {
           module: /qrcode-svg/,

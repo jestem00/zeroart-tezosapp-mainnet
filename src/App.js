@@ -9,7 +9,6 @@ import ImpactMetrics from './components/ImpactMetrics';
 import MintBurnTransfer from './components/MintBurnTransfer/MintBurnTransfer';
 import Terms from './components/Terms';
 import styled from 'styled-components';
-import { WalletProvider } from './contexts/WalletContext';
 
 const MainContainer = styled.div`
   display: flex;
@@ -19,20 +18,19 @@ const MainContainer = styled.div`
 
 function App() {
   return (
-    <WalletProvider>
-      <Router>
-        <Header />
-        <MainContainer>
-          <ImpactMetrics />
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/generate" element={<GenerateContract />} />
-            <Route path="/mint-burn-transfer" element={<MintBurnTransfer />} />
-            <Route path="/terms" element={<Terms />} />
-          </Routes>
-        </MainContainer>
-      </Router>
-    </WalletProvider>
+    <Router>
+      <Header />
+      <MainContainer>
+        <ImpactMetrics />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/generate" element={<GenerateContract />} />
+          <Route path="/mint-burn-transfer" element={<MintBurnTransfer />} />
+          <Route path="/terms" element={<Terms />} />
+          {/* Add other routes as needed */}
+        </Routes>
+      </MainContainer>
+    </Router>
   );
 }
 

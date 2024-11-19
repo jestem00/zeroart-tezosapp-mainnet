@@ -12,7 +12,7 @@ export const WalletContext = createContext();
 export const WalletProvider = ({ children }) => {
   const [walletAddress, setWalletAddress] = useState('');
   const [isWalletConnected, setIsWalletConnected] = useState(false);
-  const [tezos, setTezos] = useState(null);
+  const [Tezos, setTezos] = useState(null);
 
   // Using ref to store BeaconWallet instance to prevent multiple instances
   const beaconWalletRef = useRef(null);
@@ -153,7 +153,7 @@ export const WalletProvider = ({ children }) => {
         isWalletConnected,
         connectWallet,
         disconnectWallet,
-        tezos,
+        Tezos,
       }}
     >
       {children}

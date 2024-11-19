@@ -13,7 +13,7 @@ import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { WalletContext } from '../contexts/WalletContext';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
-import { ReactComponent as Logo } from '../logo.svg';
+import { ReactComponent as Logo } from '../logo.svg'; // Ensure the path is correct
 
 const StyledLink = styled(Link)`
   text-decoration: none;
@@ -27,7 +27,6 @@ const Header = () => {
     isWalletConnected,
     connectWallet,
     disconnectWallet,
-    tezos,
   } = useContext(WalletContext);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
@@ -35,8 +34,6 @@ const Header = () => {
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
   };
-
-  const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
   return (
     <>

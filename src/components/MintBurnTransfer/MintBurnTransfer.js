@@ -167,8 +167,17 @@ const MintBurnTransfer = () => {
       <Disclaimer>
         <Typography variant="body2">
           <strong>Disclaimer:</strong> This platform is provided "as is" without any warranties.
-          Use at your own risk. Please test thoroughly on Ghostnet before deploying to mainnet.
-          This platform works with both single edition (#ZeroContract v1.0) and multiple editions (#ZeroContract v2.0) contracts.
+          Use at your own risk. Please test thoroughly on{' '}
+          <Link
+            href="https://ghostnet.savetheworldwithart.io"
+            color="primary"
+            underline="hover"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Ghostnet
+          </Link>{' '}
+          before deploying to mainnet. This platform works with both single edition (#ZeroContract v1.0) and multiple editions (#ZeroContract v2.0) contracts.
         </Typography>
       </Disclaimer>
       {!isWalletConnected ? (

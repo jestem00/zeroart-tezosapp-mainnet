@@ -1,3 +1,5 @@
+// GenerateContract.js
+
 import React, { useState, useEffect, useContext } from 'react';
 import styled from 'styled-components';
 import {
@@ -78,9 +80,20 @@ const TEZOS_STORAGE_CONTENT_HEX = stringToHex(TEZOS_STORAGE_CONTENT_KEY);
 
 const CONTENT_KEY = 'content';
 
+// Google Form configuration
+const GOOGLE_FORM_ACTION_URL =
+  'https://docs.google.com/forms/u/0/d/e/1FAIpQLSc7SjaXTLFpeV6Prw7aW4RaZw9BWNC3EOgrd1tylPWyn4g37g/formResponse';
+
+const GOOGLE_FORM_ENTRY_IDS = {
+  contractAddress: 'entry.753925675',
+  ownerAddress: 'entry.19257702',
+  version: 'entry.22875591',
+  // deploymentDate: 'entry.1586801890', // Uncomment if you decide to include this field
+};
+
 const GenerateContract = () => {
   // Context and State Variables
-  const { Tezos, isWalletConnected, walletAddress } = useContext(WalletContext);
+  const { tezos, isWalletConnected, walletAddress } = useContext(WalletContext);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -99,7 +112,7 @@ const GenerateContract = () => {
   const [deploying, setDeploying] = useState(false);
   const [modifiedMichelsonCode, setModifiedMichelsonCode] = useState('');
   const [confirmDialog, setConfirmDialog] = useState({ open: false, data: null });
-  const [contractDialogOpen, setContractDialogOpen] = useState(false); // New state for contract dialog
+  const [contractDialogOpen, setContractDialogOpen] = useState(false);
 
   const [michelsonCode, setMichelsonCode] = useState('');
 
@@ -370,6 +383,54 @@ const GenerateContract = () => {
       });
   };
 
+  // Function to submit data to Google Form using a hidden form submission
+  const submitToGoogleForm = (contractAddr, ownerAddr, version) => {
+    const form = document.createElement('form');
+    form.action = GOOGLE_FORM_ACTION_URL;
+    form.method = 'POST';
+    form.target = 'hidden_iframe'; // Targeting a hidden iframe to prevent page reload
+
+    // Create hidden input fields for each form entry
+    const contractInput = document.createElement('input');
+    contractInput.type = 'hidden';
+    contractInput.name = GOOGLE_FORM_ENTRY_IDS.contractAddress;
+    contractInput.value = contractAddr;
+    form.appendChild(contractInput);
+
+    const ownerInput = document.createElement('input');
+    ownerInput.type = 'hidden';
+    ownerInput.name = GOOGLE_FORM_ENTRY_IDS.ownerAddress;
+    ownerInput.value = ownerAddr;
+    form.appendChild(ownerInput);
+
+    const versionInput = document.createElement('input');
+    versionInput.type = 'hidden';
+    versionInput.name = GOOGLE_FORM_ENTRY_IDS.version;
+    versionInput.value = version;
+    form.appendChild(versionInput);
+
+    // Append the form to the body
+    document.body.appendChild(form);
+
+    // Create a hidden iframe to submit the form without redirecting
+    let iframe = document.getElementById('hidden_iframe');
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.name = 'hidden_iframe';
+      iframe.id = 'hidden_iframe';
+      document.body.appendChild(iframe);
+    }
+
+    // Submit the form
+    form.submit();
+
+    // Remove the form after submission
+    document.body.removeChild(form);
+
+    console.log('Contract deployment data submitted to Google Form via form submission.');
+  };
+
   // Handle Contract Deployment
   const handleDeployContract = async () => {
     if (!validateForm()) {
@@ -457,7 +518,7 @@ const GenerateContract = () => {
         };
       }
 
-      const originationOp = await Tezos.wallet
+      const originationOp = await tezos.wallet
         .originate({
           code: modifiedMichelsonCode,
           storage: storage,
@@ -478,7 +539,16 @@ const GenerateContract = () => {
           message: `Contract deployed at ${contractAddr}`,
           severity: 'success',
         });
-        setContractDialogOpen(true); // Open the contract dialog
+        setContractDialogOpen(true);
+
+        // Submit data to Google Form
+        submitToGoogleForm(contractAddr, walletAddress, formData.contractVersion);
+
+        setSnackbar({
+          open: true,
+          message: `Contract deployed at ${contractAddr} and submitted for gallery update.`,
+          severity: 'success',
+        });
 
         // Store the deployed contract in localStorage for management
         const storedContracts = JSON.parse(localStorage.getItem('deployedContracts')) || [];
@@ -642,12 +712,8 @@ const GenerateContract = () => {
                   label="Contract Version *"
                   onChange={handleInputChange}
                 >
-                  <MenuItem value="v1">
-                    #ZeroContract v1 - 1/1 NFTs Only
-                  </MenuItem>
-                  <MenuItem value="v2">
-                    #ZeroContract v2 - Can Mint Multiple Editions
-                  </MenuItem>
+                  <MenuItem value="v1">#ZeroContract v1 - 1/1 NFTs Only</MenuItem>
+                  <MenuItem value="v2">#ZeroContract v2 - Can Mint Multiple Editions</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -910,7 +976,7 @@ const GenerateContract = () => {
           <Typography variant="body2" style={{ marginTop: '10px' }}>
             Please check your contract on{' '}
             <Link
-              href={`https://better-call.dev/mainnet/${contractAddress}/operations`}
+              href={`https://better-call.dev/ghostnet/${contractAddress}/operations`}
               target="_blank"
               rel="noopener noreferrer"
               color="primary"
@@ -920,7 +986,7 @@ const GenerateContract = () => {
             </Link>{' '}
             or{' '}
             <Link
-              href={`https://objkt.com/collections/${contractAddress}`}
+              href={`https://ghostnet.objkt.com/collections/${contractAddress}`}
               target="_blank"
               rel="noopener noreferrer"
               color="primary"
@@ -963,7 +1029,7 @@ const GenerateContract = () => {
           <Typography variant="body2" style={{ marginTop: '10px' }}>
             You can also view your contract on{' '}
             <Link
-              href={`https://better-call.dev/mainnet/${contractAddress}/operations`}
+              href={`https://better-call.dev/ghostnet/${contractAddress}/operations`}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -971,7 +1037,7 @@ const GenerateContract = () => {
             </Link>{' '}
             or{' '}
             <Link
-              href={`https://objkt.com/collections/${contractAddress}`}
+              href={`https://ghostnet.objkt.com/collections/${contractAddress}`}
               target="_blank"
               rel="noopener noreferrer"
             >

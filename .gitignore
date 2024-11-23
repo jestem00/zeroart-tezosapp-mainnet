@@ -20,3 +20,9 @@
 .env
 yarn-debug.log*
 yarn-error.log*
+vercel.json
+.vercel
+node_modules/
+frontend/node_modules/
+api/node_modules/
+.env

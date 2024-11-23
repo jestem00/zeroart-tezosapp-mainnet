@@ -8,7 +8,7 @@ import GenerateContract from './components/GenerateContract';
 import ImpactMetrics from './components/ImpactMetrics';
 import MintBurnTransfer from './components/MintBurnTransfer/MintBurnTransfer';
 import Terms from './components/Terms';
-import OnChainLicense from './components/OnChainLicense'; // Import the new component
+import OnChainLicense from './components/OnChainLicense';
 import styled from 'styled-components';
 
 const MainContainer = styled.div`

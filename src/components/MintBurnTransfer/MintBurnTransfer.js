@@ -159,7 +159,6 @@ const MintBurnTransfer = () => {
       'add_parent',
       'remove_child',
       'remove_parent',
-      'set_pause',
     ];
     
     // Extract all entrypoint names and convert to lowercase for case-insensitive comparison

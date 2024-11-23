@@ -1,4 +1,4 @@
-// GenerateContract.js
+// src/components/GenerateContract.js
 
 import React, { useState, useEffect, useContext } from 'react';
 import styled from 'styled-components';
@@ -34,9 +34,17 @@ const Container = styled(Paper)`
   padding: 20px;
   margin: 20px auto;
   max-width: 1200px;
+  width: 95%;
+  box-sizing: border-box;
+
+  @media (max-width: 900px) {
+    padding: 15px;
+    width: 98%;
+  }
+
   @media (max-width: 600px) {
     padding: 10px;
-    margin: 10px auto;
+    width: 100%;
   }
 `;
 
@@ -51,6 +59,13 @@ const Preformatted = styled.pre`
   overflow: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+
+  @media (max-width: 600px) {
+    max-height: 200px;
+    font-size: 0.8rem;
+  }
 `;
 
 // Helper Functions
@@ -644,7 +659,7 @@ const GenerateContract = () => {
       <Typography variant="h4" gutterBottom align="center">
         Deploy Your On-Chain Tezos NFT Smart Contract
       </Typography>
-      <Typography variant="h4" gutterBottom align="center">
+      <Typography variant="h5" gutterBottom align="center">
         NFT Collection Contract
       </Typography>
       <Typography variant="body1" gutterBottom align="center">
@@ -685,7 +700,7 @@ const GenerateContract = () => {
             >
               Ghostnet
             </Link>{' '}
-            before deploying to mainnet, as all actions are final and permanent. ⚠️ OBJKT might not display Collection Thumbnails over 254 Characters, so make em' teeny tiny!
+            before deploying to mainnet, as all actions are final and permanent. ⚠️ OBJKT might not display Collection Thumbnails over 254 Characters, so make 'em teeny tiny!
           </Typography>
         </Alert>
       </Section>
@@ -729,10 +744,9 @@ const GenerateContract = () => {
               <TextField
                 label="NFT Collection Name *"
                 name="name"
-                fullWidth
-                margin="normal"
                 value={formData.name}
                 onChange={handleInputChange}
+                fullWidth
                 placeholder="e.g., SaveTheWorldWithArt"
                 required
                 inputProps={{
@@ -749,10 +763,9 @@ const GenerateContract = () => {
               <TextField
                 label="NFT Symbol *"
                 name="symbol"
-                fullWidth
-                margin="normal"
                 value={formData.symbol}
                 onChange={handleInputChange}
+                fullWidth
                 placeholder="Unique symbol, e.g., SWTWA"
                 required
                 inputProps={{
@@ -769,12 +782,11 @@ const GenerateContract = () => {
               <TextField
                 label="NFT Collection Description *"
                 name="description"
-                fullWidth
-                margin="normal"
-                multiline
-                rows={4}
                 value={formData.description}
                 onChange={handleInputChange}
+                fullWidth
+                multiline
+                rows={4}
                 placeholder="Provide a brief description of your NFT collection."
                 required
                 inputProps={{
@@ -791,10 +803,9 @@ const GenerateContract = () => {
               <TextField
                 label="Author(s) *"
                 name="authors"
-                fullWidth
-                margin="normal"
                 value={formData.authors}
                 onChange={handleInputChange}
+                fullWidth
                 placeholder="Comma-separated names, e.g., Alice, Bob"
                 required
                 inputProps={{
@@ -811,10 +822,9 @@ const GenerateContract = () => {
               <TextField
                 label="Author Address(es) *"
                 name="authorAddresses"
-                fullWidth
-                margin="normal"
                 value={formData.authorAddresses}
                 onChange={handleInputChange}
+                fullWidth
                 placeholder="Comma-separated Tezos addresses, e.g., tz1..., tz2..."
                 required
                 inputProps={{
@@ -831,10 +841,9 @@ const GenerateContract = () => {
               <TextField
                 label="Creator(s) *"
                 name="creators"
-                fullWidth
-                margin="normal"
                 value={formData.creators}
                 onChange={handleInputChange}
+                fullWidth
                 placeholder="Comma-separated Tezos addresses, e.g., tz1..., tz2..."
                 required
                 inputProps={{
@@ -900,9 +909,9 @@ const GenerateContract = () => {
                 label={
                   <span>
                     I agree to the{' '}
-                    <a href="/terms" target="_blank" rel="noopener noreferrer">
+                    <Link href="/terms" target="_blank" rel="noopener noreferrer">
                       Terms and Conditions
-                    </a>
+                    </Link>
                     .
                   </span>
                 }
@@ -936,6 +945,11 @@ const GenerateContract = () => {
                   color="primary"
                   onClick={handleCopyContract}
                   disabled={!modifiedMichelsonCode}
+                  fullWidth={window.innerWidth < 600} // Responsive fullWidth
+                  sx={{
+                    maxWidth: '300px',
+                    margin: '0 auto',
+                  }}
                 >
                   Copy Contract
                 </Button>
@@ -952,6 +966,11 @@ const GenerateContract = () => {
                   onClick={handleDeployContract}
                   disabled={deploying || !modifiedMichelsonCode || Object.keys(formErrors).length > 0}
                   startIcon={deploying && <CircularProgress size={20} />}
+                  fullWidth={window.innerWidth < 600} // Responsive fullWidth
+                  sx={{
+                    maxWidth: '300px',
+                    margin: '0 auto',
+                  }}
                 >
                   {deploying ? 'Deploying...' : 'Deploy Contract'}
                 </Button>
@@ -976,6 +995,11 @@ const GenerateContract = () => {
             color="secondary"
             onClick={() => navigator.clipboard.writeText(contractAddress)}
             style={{ marginTop: '10px' }}
+            fullWidth
+            sx={{
+              maxWidth: '300px',
+              margin: '10px auto 0',
+            }}
           >
             Copy Contract Address
           </Button>
@@ -1017,6 +1041,8 @@ const GenerateContract = () => {
         }}
         aria-labelledby="contract-dialog-title"
         aria-describedby="contract-dialog-description"
+        fullWidth
+        maxWidth="sm" // Limit dialog width
       >
         <DialogTitle id="contract-dialog-title">Your Contract Address</DialogTitle>
         <DialogContent>
@@ -1029,13 +1055,14 @@ const GenerateContract = () => {
             color="primary"
             onClick={() => navigator.clipboard.writeText(contractAddress)}
             style={{ marginTop: '10px' }}
+            fullWidth
           >
             Copy Contract Address
           </Button>
           <Typography variant="body2" style={{ marginTop: '10px' }}>
             You can also view your contract on{' '}
             <Link
-              href={`https://better-call.dev/${contractAddress}/operations`}
+              href={`https://better-call.dev/mainnet/${contractAddress}/operations`}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -1065,6 +1092,8 @@ const GenerateContract = () => {
         onClose={handleCloseDialog}
         aria-labelledby="confirm-deployment-title"
         aria-describedby="confirm-deployment-description"
+        fullWidth
+        maxWidth="sm"
       >
         <DialogTitle id="confirm-deployment-title">Confirm Deployment</DialogTitle>
         <DialogContent>

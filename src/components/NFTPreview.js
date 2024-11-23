@@ -9,6 +9,9 @@ const StyledCard = styled(Card)`
   max-width: 500px;
   margin-left: auto;
   margin-right: auto;
+  box-sizing: border-box;
+  width: 100%; /* Ensure card takes full width of its container */
+  
   @media (max-width: 600px) {
     max-width: 90%;
   }
@@ -16,6 +19,19 @@ const StyledCard = styled(Card)`
 
 const CenteredCardContent = styled(CardContent)`
   text-align: center;
+`;
+
+const ResponsiveMedia = styled.div`
+  width: 100%;
+  height: auto;
+
+  img,
+  video,
+  iframe {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+  }
 `;
 
 const NFTPreview = ({ metadata }) => {
@@ -26,12 +42,12 @@ const NFTPreview = ({ metadata }) => {
   const renderMedia = () => {
     if (imageUri.startsWith('data:image')) {
       return (
-        <img src={imageUri} alt={`${name} Thumbnail`} style={{ maxWidth: '100%', height: 'auto' }} />
+        <img src={imageUri} alt={`${name} Thumbnail`} />
       );
     }
     if (imageUri.startsWith('data:video')) {
       return (
-        <video src={imageUri} controls style={{ maxWidth: '100%', height: 'auto' }} />
+        <video src={imageUri} controls />
       );
     }
     if (imageUri.startsWith('data:text/html')) {
@@ -48,7 +64,9 @@ const NFTPreview = ({ metadata }) => {
 
   return (
     <StyledCard>
-      {renderMedia()}
+      <ResponsiveMedia>
+        {renderMedia()}
+      </ResponsiveMedia>
       <CenteredCardContent>
         <Typography variant="h6">{name}</Typography>
         <Typography variant="body2" color="textSecondary">

@@ -7,9 +7,17 @@ import { getTotalImpact } from '../utils/ecologiApi'; // Ensure this function is
 
 const Container = styled(Paper)`
   padding: 20px;
-  margin: 20px;
+  margin: 20px auto;
   text-align: center;
   background-color: #e0f7fa; /* Light blue background for prominence */
+  box-sizing: border-box;
+  max-width: 600px; /* Limit the maximum width for better readability */
+  width: 90%; /* Responsive width */
+  
+  @media (max-width: 600px) {
+    padding: 15px;
+    margin: 15px auto;
+  }
 `;
 
 const ImpactMetrics = () => {

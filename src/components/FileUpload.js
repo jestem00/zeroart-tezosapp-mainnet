@@ -1,10 +1,13 @@
 // src/components/FileUpload.js
 
 import React, { useState } from 'react';
-import { Button, Snackbar, Alert } from '@mui/material';
+import { Button, Snackbar, Alert, useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 
 const FileUpload = ({ setArtifactData }) => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')); // Detect small screens
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -42,7 +45,12 @@ const FileUpload = ({ setArtifactData }) => {
         onChange={handleFileChange}
       />
       <label htmlFor="collection-thumbnail-upload">
-        <Button variant="contained" component="span" style={{ marginTop: '10px' }}>
+        <Button
+          variant="contained"
+          component="span"
+          style={{ marginTop: '10px' }}
+          fullWidth={isSmallScreen} // Make button full width on small screens
+        >
           Upload Collection Thumbnail, Under 20KB! *
         </Button>
       </label>

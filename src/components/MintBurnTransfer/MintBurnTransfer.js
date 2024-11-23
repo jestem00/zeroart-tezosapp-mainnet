@@ -1,3 +1,5 @@
+// src/components/MintBurnTransfer/MintBurnTransfer.js
+
 import React, { useState, useContext } from 'react';
 import styled from 'styled-components';
 import {
@@ -8,7 +10,7 @@ import {
   Alert,
   TextField,
   CircularProgress,
-  Link, // Ensure Link is imported
+  Link,
 } from '@mui/material';
 import { WalletContext } from '../../contexts/WalletContext';
 import Mint from './Mint';
@@ -22,6 +24,18 @@ const StyledPaper = styled(Paper)`
   padding: 20px;
   margin: 20px auto;
   max-width: 800px;
+  width: 95%;
+  box-sizing: border-box;
+
+  @media (max-width: 900px) {
+    padding: 15px;
+    width: 98%;
+  }
+
+  @media (max-width: 600px) {
+    padding: 10px;
+    width: 100%;
+  }
 `;
 
 const Disclaimer = styled.div`
@@ -29,30 +43,8 @@ const Disclaimer = styled.div`
   padding: 10px;
   background-color: #fff8e1;
   border-left: 6px solid #ffeb3b;
+  box-sizing: border-box;
 `;
-
-// Helper function to detect contract version based on entrypoints
-const detectContractVersion = (entrypoints) => {
-  const v2UniqueEntrypoints = [
-    'add_child',
-    'add_parent',
-    'remove_child',
-    'remove_parent',
-    'set_pause',
-  ];
-  
-  // Extract all entrypoint names and convert to lowercase for case-insensitive comparison
-  const entrypointNames = Object.keys(entrypoints).map(ep => ep.toLowerCase());
-  console.log('Entrypoint Names:', entrypointNames);
-  
-  // Identify which unique v2 entrypoints are present
-  const v2EntrypointsPresent = v2UniqueEntrypoints.filter(ep => entrypointNames.includes(ep));
-  
-  console.log(`v2 unique entrypoints present: ${v2EntrypointsPresent.join(', ')}`);
-  
-  // Determine contract version based on the presence of unique v2 entrypoints
-  return v2EntrypointsPresent.length >= 2 ? 'v2' : 'v1';
-};
 
 const MintBurnTransfer = () => {
   const { Tezos, isWalletConnected } = useContext(WalletContext);
@@ -160,6 +152,29 @@ const MintBurnTransfer = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
+  // Function to detect contract version based on entrypoints
+  const detectContractVersion = (entrypoints) => {
+    const v2UniqueEntrypoints = [
+      'add_child',
+      'add_parent',
+      'remove_child',
+      'remove_parent',
+      'set_pause',
+    ];
+    
+    // Extract all entrypoint names and convert to lowercase for case-insensitive comparison
+    const entrypointNames = Object.keys(entrypoints).map(ep => ep.toLowerCase());
+    console.log('Entrypoint Names:', entrypointNames);
+    
+    // Identify which unique v2 entrypoints are present
+    const v2EntrypointsPresent = v2UniqueEntrypoints.filter(ep => entrypointNames.includes(ep));
+    
+    console.log(`v2 unique entrypoints present: ${v2EntrypointsPresent.join(', ')}`);
+    
+    // Determine contract version based on the presence of unique v2 entrypoints
+    return v2EntrypointsPresent.length >= 2 ? 'v2' : 'v1';
+  };
+
   return (
     <StyledPaper elevation={3}>
       <Typography variant="h5" gutterBottom>
@@ -192,6 +207,9 @@ const MintBurnTransfer = () => {
             fullWidth
             placeholder="e.g., KT1..."
             style={{ marginBottom: '20px', marginTop: '20px' }}
+            InputProps={{
+              style: { wordBreak: 'break-all' },
+            }}
           />
           <Button
             variant="contained"
@@ -199,6 +217,11 @@ const MintBurnTransfer = () => {
             onClick={fetchContractMetadata}
             disabled={loading}
             startIcon={loading && <CircularProgress size={20} />}
+            fullWidth={window.innerWidth < 600} // Responsive fullWidth
+            sx={{
+              maxWidth: '300px',
+              margin: '0 auto',
+            }}
           >
             {loading ? 'Loading...' : 'Load Contract'}
           </Button>
@@ -211,7 +234,11 @@ const MintBurnTransfer = () => {
                 <img
                   src={contractMetadata.imageUri}
                   alt="Contract Thumbnail"
-                  style={{ maxWidth: '100%', marginBottom: '20px' }}
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '300px',
+                    marginTop: '10px',
+                  }}
                 />
               )}
               <Typography variant="body1">{contractMetadata.description}</Typography>
@@ -221,6 +248,11 @@ const MintBurnTransfer = () => {
                   color="success"
                   onClick={() => handleActionClick('mint')}
                   style={{ marginRight: '10px', marginBottom: '10px' }}
+                  fullWidth={window.innerWidth < 600}
+                  sx={{
+                    maxWidth: '300px',
+                    margin: '0 auto 10px auto',
+                  }}
                 >
                   Mint
                 </Button>
@@ -235,6 +267,11 @@ const MintBurnTransfer = () => {
                   color="secondary"
                   onClick={() => handleActionClick('burn')}
                   style={{ marginRight: '10px', marginBottom: '10px' }}
+                  fullWidth={window.innerWidth < 600}
+                  sx={{
+                    maxWidth: '300px',
+                    margin: '0 auto 10px auto',
+                  }}
                 >
                   Burn
                 </Button>
@@ -249,6 +286,11 @@ const MintBurnTransfer = () => {
                   color="warning"
                   onClick={() => handleActionClick('transfer')}
                   style={{ marginRight: '10px', marginBottom: '10px' }}
+                  fullWidth={window.innerWidth < 600}
+                  sx={{
+                    maxWidth: '300px',
+                    margin: '0 auto 10px auto',
+                  }}
                 >
                   Transfer
                 </Button>
@@ -261,6 +303,11 @@ const MintBurnTransfer = () => {
                   color="info"
                   onClick={() => handleActionClick('balance_of')}
                   style={{ marginRight: '10px', marginBottom: '10px' }}
+                  fullWidth={window.innerWidth < 600}
+                  sx={{
+                    maxWidth: '300px',
+                    margin: '0 auto 10px auto',
+                  }}
                 >
                   Balance Of
                 </Button>
@@ -273,6 +320,11 @@ const MintBurnTransfer = () => {
                   color="primary"
                   onClick={() => handleActionClick('update_operators')}
                   style={{ marginBottom: '10px' }}
+                  fullWidth={window.innerWidth < 600}
+                  sx={{
+                    maxWidth: '300px',
+                    margin: '0 auto 10px auto',
+                  }}
                 >
                   Update Operators
                 </Button>

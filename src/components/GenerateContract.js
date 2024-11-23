@@ -54,7 +54,9 @@ const Preformatted = styled.pre`
 `;
 
 // Helper Functions
-const stringToHex = (str) => Buffer.from(str, 'utf8').toString('hex');
+const stringToHex = (str) => {
+  return [...str].map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+};
 
 const isValidTezosAddress = (address) => {
   const tezosAddressRegex = /^(tz1|tz2|tz3|KT1)[1-9A-HJ-NP-Za-km-z]{33}$/;
@@ -93,7 +95,7 @@ const GOOGLE_FORM_ENTRY_IDS = {
 
 const GenerateContract = () => {
   // Context and State Variables
-  const { tezos, isWalletConnected, walletAddress } = useContext(WalletContext);
+  const { Tezos, isWalletConnected, walletAddress } = useContext(WalletContext);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -444,7 +446,11 @@ const GenerateContract = () => {
     }
 
     if (!walletAddress) {
-      setSnackbar({ open: true, message: 'Wallet address is undefined. Please reconnect your wallet.', severity: 'error' });
+      setSnackbar({
+        open: true,
+        message: 'Wallet address is undefined. Please reconnect your wallet.',
+        severity: 'error',
+      });
       return;
     }
 
@@ -481,7 +487,7 @@ const GenerateContract = () => {
       };
 
       const jsonString = JSON.stringify(metadataObj);
-      const metadataHex = Buffer.from(jsonString).toString('hex');
+      const metadataHex = stringToHex(jsonString); // Replaced Buffer usage
 
       const metadataMap = new MichelsonMap();
       metadataMap.set('', TEZOS_STORAGE_CONTENT_HEX);
@@ -518,7 +524,7 @@ const GenerateContract = () => {
         };
       }
 
-      const originationOp = await tezos.wallet
+      const originationOp = await Tezos.wallet
         .originate({
           code: modifiedMichelsonCode,
           storage: storage,
@@ -976,7 +982,7 @@ const GenerateContract = () => {
           <Typography variant="body2" style={{ marginTop: '10px' }}>
             Please check your contract on{' '}
             <Link
-              href={`https://better-call.dev/ghostnet/${contractAddress}/operations`}
+              href={`https://better-call.dev/mainnet/${contractAddress}/operations`}
               target="_blank"
               rel="noopener noreferrer"
               color="primary"
@@ -986,7 +992,7 @@ const GenerateContract = () => {
             </Link>{' '}
             or{' '}
             <Link
-              href={`https://ghostnet.objkt.com/collections/${contractAddress}`}
+              href={`https://objkt.com/collections/${contractAddress}`}
               target="_blank"
               rel="noopener noreferrer"
               color="primary"
@@ -1029,7 +1035,7 @@ const GenerateContract = () => {
           <Typography variant="body2" style={{ marginTop: '10px' }}>
             You can also view your contract on{' '}
             <Link
-              href={`https://better-call.dev/ghostnet/${contractAddress}/operations`}
+              href={`https://better-call.dev/${contractAddress}/operations`}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -1037,7 +1043,7 @@ const GenerateContract = () => {
             </Link>{' '}
             or{' '}
             <Link
-              href={`https://ghostnet.objkt.com/collections/${contractAddress}`}
+              href={`https://objkt.com/collections/${contractAddress}`}
               target="_blank"
               rel="noopener noreferrer"
             >

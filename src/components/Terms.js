@@ -41,7 +41,7 @@ const Terms = () => {
               >
                 Ghostnet.savetheworldwithart.io
               </Link>{' '}
-              before deploying to mainnet, as all actions are final and permanent. ⚠️ OBJKT might not display
+              before deploying to mainnet, as all actions are final and permanent. If you make a mistake you can hide the collection from your main objkt portfolio or burn any erroneous tokens. ⚠️ OBJKT might not display
               Collection Thumbnails over 254 Characters, so make em' teeny tiny!
             </Typography>
           </Alert>

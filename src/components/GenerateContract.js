@@ -698,7 +698,7 @@ const GenerateContract = () => {
               target="_blank"
               rel="noopener noreferrer"
             >
-              Ghostnet
+              Ghostnet.savetheworldwithart.io
             </Link>{' '}
             before deploying to mainnet, as all actions are final and permanent. ⚠️ OBJKT might not display Collection Thumbnails over 254 Characters, so make 'em teeny tiny!
           </Typography>

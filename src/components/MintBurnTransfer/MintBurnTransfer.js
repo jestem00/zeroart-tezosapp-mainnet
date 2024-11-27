@@ -190,7 +190,7 @@ const MintBurnTransfer = () => {
             target="_blank"
             rel="noopener noreferrer"
           >
-            Ghostnet
+            Ghostnet.savetheworldwithart.io
           </Link>{' '}
           before deploying to mainnet. This platform works with both single edition (#ZeroContract v1.0) and multiple editions (#ZeroContract v2.0) contracts.
         </Typography>

@@ -402,50 +402,54 @@ const GenerateContract = () => {
 
   // Function to submit data to Google Form using a hidden form submission
   const submitToGoogleForm = (contractAddr, ownerAddr, version) => {
-    const form = document.createElement('form');
-    form.action = GOOGLE_FORM_ACTION_URL;
-    form.method = 'POST';
-    form.target = 'hidden_iframe'; // Targeting a hidden iframe to prevent page reload
+    return new Promise((resolve, reject) => {
+      const form = document.createElement('form');
+      form.action = GOOGLE_FORM_ACTION_URL;
+      form.method = 'POST';
+      form.target = 'hidden_iframe'; // Targeting a hidden iframe to prevent page reload
 
-    // Create hidden input fields for each form entry
-    const contractInput = document.createElement('input');
-    contractInput.type = 'hidden';
-    contractInput.name = GOOGLE_FORM_ENTRY_IDS.contractAddress;
-    contractInput.value = contractAddr;
-    form.appendChild(contractInput);
+      // Create hidden input fields for each form entry
+      const fields = {
+        [GOOGLE_FORM_ENTRY_IDS.contractAddress]: contractAddr,
+        [GOOGLE_FORM_ENTRY_IDS.ownerAddress]: ownerAddr,
+        [GOOGLE_FORM_ENTRY_IDS.version]: version,
+      };
 
-    const ownerInput = document.createElement('input');
-    ownerInput.type = 'hidden';
-    ownerInput.name = GOOGLE_FORM_ENTRY_IDS.ownerAddress;
-    ownerInput.value = ownerAddr;
-    form.appendChild(ownerInput);
+      for (const [key, value] of Object.entries(fields)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+      }
 
-    const versionInput = document.createElement('input');
-    versionInput.type = 'hidden';
-    versionInput.name = GOOGLE_FORM_ENTRY_IDS.version;
-    versionInput.value = version;
-    form.appendChild(versionInput);
+      // Append the form to the body
+      document.body.appendChild(form);
 
-    // Append the form to the body
-    document.body.appendChild(form);
+      // Create a hidden iframe if it doesn't exist
+      let iframe = document.getElementById('hidden_iframe');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.name = 'hidden_iframe';
+        iframe.id = 'hidden_iframe';
+        // Resolve the promise when the iframe loads (i.e., form submission is complete)
+        iframe.onload = () => {
+          // Assume success since Google Forms doesn't provide a response
+          resolve();
+        };
+        document.body.appendChild(iframe);
+      }
 
-    // Create a hidden iframe to submit the form without redirecting
-    let iframe = document.getElementById('hidden_iframe');
-    if (!iframe) {
-      iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.name = 'hidden_iframe';
-      iframe.id = 'hidden_iframe';
-      document.body.appendChild(iframe);
-    }
+      // Submit the form
+      form.submit();
 
-    // Submit the form
-    form.submit();
-
-    // Remove the form after submission
-    document.body.removeChild(form);
-
-    console.log('Contract deployment data submitted to Google Form via form submission.');
+      // Remove the form after submission
+      setTimeout(() => {
+        document.body.removeChild(form);
+        resolve();
+      }, 1000); // Adjust the timeout as needed
+    });
   };
 
   // Handle Contract Deployment
@@ -563,7 +567,7 @@ const GenerateContract = () => {
         setContractDialogOpen(true);
 
         // Submit data to Google Form
-        submitToGoogleForm(contractAddr, walletAddress, formData.contractVersion);
+        await submitToGoogleForm(contractAddr, walletAddress, formData.contractVersion);
 
         setSnackbar({
           open: true,

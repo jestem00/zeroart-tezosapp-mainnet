@@ -1,4 +1,4 @@
-// src/components/GenerateContract.js
+// src/components/GenerateContract.js 
 
 import React, { useState, useEffect, useContext } from 'react';
 import styled from 'styled-components';
@@ -23,11 +23,14 @@ import {
   Checkbox,
   FormControlLabel,
   Link,
+  Tooltip,
 } from '@mui/material';
 import { WalletContext } from '../contexts/WalletContext';
 import NFTPreview from './NFTPreview';
 import FileUpload from './FileUpload';
 import { MichelsonMap } from '@taquito/taquito';
+import { BigNumber } from 'bignumber.js';
+import InfoIcon from '@mui/icons-material/Info';
 
 // Styled Components
 const Container = styled(Paper)`
@@ -69,16 +72,19 @@ const Preformatted = styled.pre`
 `;
 
 // Helper Functions
+
+// Convert string to hexadecimal
 const stringToHex = (str) => {
   return [...str].map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
 };
 
+// Validate Tezos address using regex
 const isValidTezosAddress = (address) => {
   const tezosAddressRegex = /^(tz1|tz2|tz3|KT1)[1-9A-HJ-NP-Za-km-z]{33}$/;
   return tezosAddressRegex.test(address);
 };
 
-// Function to Calculate Byte Size of Data URI
+// Calculate byte size of Data URI
 const getByteSize = (dataUri) => {
   try {
     const base64Data = dataUri.split(',')[1];
@@ -108,6 +114,9 @@ const GOOGLE_FORM_ENTRY_IDS = {
   // deploymentDate: 'entry.1586801890', // Uncomment if you decide to include this field
 };
 
+// Define storage cost per byte (tez per byte)
+const STORAGE_COST_PER_BYTE = 0.00025; // tez per byte
+
 const GenerateContract = () => {
   // Context and State Variables
   const { Tezos, isWalletConnected, walletAddress } = useContext(WalletContext);
@@ -132,6 +141,10 @@ const GenerateContract = () => {
   const [contractDialogOpen, setContractDialogOpen] = useState(false);
 
   const [michelsonCode, setMichelsonCode] = useState('');
+  const [estimatedFeeTez, setEstimatedFeeTez] = useState(null);
+  const [estimatedGasLimit, setEstimatedGasLimit] = useState(null);
+  const [estimatedStorageLimit, setEstimatedStorageLimit] = useState(null);
+  const [estimatedBalanceChangeTez, setEstimatedBalanceChangeTez] = useState(null); // New state for balance change
 
   // Define the symbol validation regex
   const symbolPattern = /^[A-Za-z0-9]{3,5}$/;
@@ -233,7 +246,7 @@ const GenerateContract = () => {
         } else if (value.length > 200) {
           errors.creators = 'Creator(s) cannot exceed 200 characters.';
         } else {
-          const creatorsArray = value.split(',').map((a) => a.trim()).filter((a) => a !== '');
+          const creatorsArray = value.split(',').map((c) => c.trim());
           const uniqueCreators = new Set(creatorsArray);
           if (uniqueCreators.size !== creatorsArray.length) {
             errors.creators = 'Duplicate creators detected.';
@@ -478,15 +491,9 @@ const GenerateContract = () => {
       return;
     }
 
-    // Open Confirmation Dialog
-    setConfirmDialog({ open: true, data: null });
-  };
-
-  // Confirm Deployment
-  const confirmDeployment = async () => {
-    setConfirmDialog({ open: false, data: null });
+    // Perform fee estimation before opening the confirmation dialog
     setDeploying(true);
-    setSnackbar({ open: true, message: 'Deploying contract...', severity: 'info' });
+    setSnackbar({ open: true, message: 'Checking balance and estimating fees...', severity: 'info' });
 
     try {
       // Define the metadata object
@@ -495,10 +502,7 @@ const GenerateContract = () => {
         description: formData.description,
         interfaces: ['TZIP-012', 'TZIP-016'],
         authors: formData.authors.split(',').map((author) => author.trim()).filter((a) => a !== ''),
-        authoraddress: formData.authorAddresses
-          .split(',')
-          .map((addr) => addr.trim())
-          .filter((a) => a !== ''),
+        authoraddress: formData.authorAddresses.split(',').map((addr) => addr.trim()).filter((a) => a !== ''),
         symbol: formData.symbol,
         creators: formData.creators.split(',').map((creator) => creator.trim()).filter((a) => a !== ''),
         type: formData.type,
@@ -506,7 +510,7 @@ const GenerateContract = () => {
       };
 
       const jsonString = JSON.stringify(metadataObj);
-      const metadataHex = stringToHex(jsonString); // Replaced Buffer usage
+      const metadataHex = stringToHex(jsonString);
 
       const metadataMap = new MichelsonMap();
       metadataMap.set('', TEZOS_STORAGE_CONTENT_HEX);
@@ -543,6 +547,129 @@ const GenerateContract = () => {
         };
       }
 
+      // Fetch user's balance
+      const balanceMutez = await Tezos.tz.getBalance(walletAddress);
+      const balanceTez = new BigNumber(balanceMutez.toNumber()).dividedBy(1e6);
+
+      // Estimate origination operation
+      const originationEstimation = await Tezos.estimate.originate({
+        code: modifiedMichelsonCode,
+        storage: storage,
+      });
+
+      const estimatedFeeMutez = originationEstimation.suggestedFeeMutez;
+      const estimatedGasLimit = originationEstimation.gasLimit;
+      const estimatedStorageLimit = originationEstimation.storageLimit;
+
+      const estimatedFeeTezLocal = new BigNumber(estimatedFeeMutez).dividedBy(1e6).toFixed(6);
+      setEstimatedFeeTez(estimatedFeeTezLocal);
+      setEstimatedGasLimit(estimatedGasLimit);
+      setEstimatedStorageLimit(estimatedStorageLimit);
+
+      // Calculate Storage Cost
+      const storageCostTez = new BigNumber(estimatedStorageLimit).multipliedBy(STORAGE_COST_PER_BYTE).toFixed(6);
+
+      // Calculate Total Estimated Cost
+      const totalEstimatedCostTez = new BigNumber(estimatedFeeTezLocal).plus(storageCostTez).toFixed(6);
+
+      // Calculate Estimated Balance Change (Total Cost)
+      const estimatedBalanceChange = new BigNumber(totalEstimatedCostTez).negated().toFixed(6); // Negative value
+
+      setEstimatedBalanceChangeTez(estimatedBalanceChange);
+
+      // Check if the balance is sufficient
+      if (balanceTez.isLessThan(totalEstimatedCostTez)) {
+        setSnackbar({
+          open: true,
+          message: `Insufficient balance. You need at least ${totalEstimatedCostTez} ꜩ to deploy this contract.`,
+          severity: 'error',
+        });
+        setDeploying(false);
+        return;
+      }
+
+      // Open Confirmation Dialog with estimation data
+      setConfirmDialog({
+        open: true,
+        data: {
+          estimatedFeeTez: estimatedFeeTezLocal,
+          estimatedGasLimit: estimatedGasLimit,
+          estimatedStorageLimit: estimatedStorageLimit,
+          storageCostTez: storageCostTez, // New field
+          estimatedBalanceChangeTez: estimatedBalanceChange,
+        },
+      });
+    } catch (error) {
+      console.error('Error during fee estimation:', error);
+
+      setSnackbar({
+        open: true,
+        message: 'Error estimating fees. Please try again.',
+        severity: 'error',
+      });
+      setDeploying(false);
+    }
+  };
+
+  // Confirm Deployment with Balance Check
+  const confirmDeployment = async () => {
+    setConfirmDialog({ open: false, data: null });
+    setDeploying(true);
+    setSnackbar({ open: true, message: 'Deploying contract...', severity: 'info' });
+
+    try {
+      // Define the metadata object
+      const metadataObj = {
+        name: formData.name,
+        description: formData.description,
+        interfaces: ['TZIP-012', 'TZIP-016'],
+        authors: formData.authors.split(',').map((author) => author.trim()).filter((a) => a !== ''),
+        authoraddress: formData.authorAddresses.split(',').map((addr) => addr.trim()).filter((a) => a !== ''),
+        symbol: formData.symbol,
+        creators: formData.creators.split(',').map((creator) => creator.trim()).filter((a) => a !== ''),
+        type: formData.type,
+        imageUri: formData.imageUri,
+      };
+
+      const jsonString = JSON.stringify(metadataObj);
+      const metadataHex = stringToHex(jsonString);
+
+      const metadataMap = new MichelsonMap();
+      metadataMap.set('', TEZOS_STORAGE_CONTENT_HEX);
+      metadataMap.set(CONTENT_KEY, metadataHex);
+
+      const ledgerMap = new MichelsonMap();
+      const operatorsMap = new MichelsonMap();
+      const tokenMetadataMap = new MichelsonMap();
+
+      let storage;
+
+      if (formData.contractVersion === 'v1') {
+        storage = {
+          admin: walletAddress,
+          ledger: ledgerMap,
+          metadata: metadataMap,
+          next_token_id: 0,
+          operators: operatorsMap,
+          token_metadata: tokenMetadataMap,
+        };
+      } else if (formData.contractVersion === 'v2') {
+        storage = {
+          admin: walletAddress, // address
+          all_tokens: 0, // nat
+          children: [], // set(address)
+          ledger: ledgerMap, // big_map
+          metadata: metadataMap, // big_map
+          next_token_id: 0, // nat
+          operators: operatorsMap, // big_map
+          parents: [], // set(address)
+          paused: false, // bool
+          token_metadata: tokenMetadataMap, // big_map
+          total_supply: new MichelsonMap(), // big_map(nat, nat)
+        };
+      }
+
+      // Proceed with origination
       const originationOp = await Tezos.wallet
         .originate({
           code: modifiedMichelsonCode,
@@ -588,12 +715,28 @@ const GenerateContract = () => {
       }
     } catch (error) {
       console.error('Error deploying contract:', error);
+
       if (error.name === 'AbortedBeaconError') {
         setSnackbar({
           open: true,
           message: 'Deployment aborted by the user.',
           severity: 'warning',
         });
+      } else if (error?.data?.[0]?.with?.string) {
+        const errorMessage = error.data[0].with.string;
+        if (errorMessage.includes('balance_too_low')) {
+          setSnackbar({
+            open: true,
+            message: 'Insufficient balance to cover fees and storage costs.',
+            severity: 'error',
+          });
+        } else {
+          setSnackbar({
+            open: true,
+            message: `Deployment error: ${errorMessage}`,
+            severity: 'error',
+          });
+        }
       } else if (error.message) {
         setSnackbar({
           open: true,
@@ -609,6 +752,10 @@ const GenerateContract = () => {
       }
     } finally {
       setDeploying(false);
+      setEstimatedFeeTez(null);
+      setEstimatedGasLimit(null);
+      setEstimatedStorageLimit(null);
+      setEstimatedBalanceChangeTez(null); // Reset balance change
     }
   };
 
@@ -978,6 +1125,12 @@ const GenerateContract = () => {
                 >
                   {deploying ? 'Deploying...' : 'Deploy Contract'}
                 </Button>
+                {/* Display Estimated Fees */}
+                {estimatedFeeTez && (
+                  <Typography variant="body2" color="textSecondary" style={{ marginTop: '10px' }}>
+                    Estimated Fees: {estimatedFeeTez} ꜩ
+                  </Typography>
+                )}
               </div>
             </Grid>
           </Grid>
@@ -1103,6 +1256,31 @@ const GenerateContract = () => {
         <DialogContent>
           <DialogContentText id="confirm-deployment-description">
             Are you sure you want to deploy this smart contract? This action is irreversible, and the contract cannot be deleted once deployed on the Tezos mainnet.
+            <br /><br />
+            <strong>Estimated Deployment Cost (Fee):</strong> {confirmDialog.data ? `${confirmDialog.data.estimatedFeeTez} ꜩ` : 'Calculating...'}{' '}
+            <Tooltip title="The network fee required to deploy your smart contract on the Tezos blockchain." arrow>
+              <InfoIcon fontSize="small" style={{ marginLeft: '5px', verticalAlign: 'middle', cursor: 'pointer' }} />
+            </Tooltip>
+            <br />
+            <strong>Gas Limit:</strong> {confirmDialog.data ? confirmDialog.data.estimatedGasLimit : 'Calculating...'}{' '}
+            <Tooltip title="The maximum amount of computational work allowed for the deployment operation." arrow>
+              <InfoIcon fontSize="small" style={{ marginLeft: '5px', verticalAlign: 'middle', cursor: 'pointer' }} />
+            </Tooltip>
+            <br />
+            <strong>Storage Limit:</strong> {confirmDialog.data ? confirmDialog.data.estimatedStorageLimit : 'Calculating...'}{' '}
+            <Tooltip title="The maximum amount of storage allocated for your contract's data on the blockchain." arrow>
+              <InfoIcon fontSize="small" style={{ marginLeft: '5px', verticalAlign: 'middle', cursor: 'pointer' }} />
+            </Tooltip>
+            <br />
+            <strong>Estimated Storage Cost:</strong> {confirmDialog.data ? `${confirmDialog.data.storageCostTez} ꜩ` : 'Calculating...'}{' '}
+            <Tooltip title="The cost associated with storing your contract's data on the Tezos blockchain." arrow>
+              <InfoIcon fontSize="small" style={{ marginLeft: '5px', verticalAlign: 'middle', cursor: 'pointer' }} />
+            </Tooltip>
+            <br />
+            <strong>Estimated Balance Change:</strong> {confirmDialog.data ? `${confirmDialog.data.estimatedBalanceChangeTez} ꜩ` : 'Calculating...'}{' '}
+            <Tooltip title="The total estimated change in your account balance after deploying the contract (fee + storage cost)." arrow>
+              <InfoIcon fontSize="small" style={{ marginLeft: '5px', verticalAlign: 'middle', cursor: 'pointer' }} />
+            </Tooltip>
           </DialogContentText>
           <Typography variant="subtitle2" color="error" style={{ marginTop: '10px' }}>
             **Please ensure all the information is correct before proceeding.**
@@ -1112,7 +1290,7 @@ const GenerateContract = () => {
           <Button onClick={handleCloseDialog} color="primary">
             Cancel
           </Button>
-          <Button onClick={confirmDeployment} color="primary" autoFocus>
+          <Button onClick={confirmDeployment} color="primary" variant="contained" autoFocus>
             Confirm Deployment
           </Button>
         </DialogActions>

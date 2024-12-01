@@ -142,8 +142,11 @@ const GenerateContract = () => {
 
   const [michelsonCode, setMichelsonCode] = useState('');
   const [estimatedFeeTez, setEstimatedFeeTez] = useState(null);
+  // eslint-disable-next-line
   const [estimatedGasLimit, setEstimatedGasLimit] = useState(null);
+  // eslint-disable-next-line
   const [estimatedStorageLimit, setEstimatedStorageLimit] = useState(null);
+  // eslint-disable-next-line
   const [estimatedBalanceChangeTez, setEstimatedBalanceChangeTez] = useState(null); // New state for balance change
 
   // Define the symbol validation regex

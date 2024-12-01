@@ -55,32 +55,6 @@ const MintBurnTransfer = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
   const [contractVersion, setContractVersion] = useState('');
 
-  // Helper Functions
-
-  // Convert string to hexadecimal
-  const stringToHex = (str) => {
-    return [...str].map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
-  };
-
-  // Validate Tezos address using regex
-  const isValidTezosAddress = (address) => {
-    const tezosAddressRegex = /^(tz1|tz2|tz3|KT1)[1-9A-HJ-NP-Za-km-z]{33}$/;
-    return tezosAddressRegex.test(address);
-  };
-
-  // Function to Calculate Byte Size of Data URI
-  const getByteSize = (dataUri) => {
-    try {
-      const base64Data = dataUri.split(',')[1];
-      if (!base64Data) return 0;
-      const padding = (base64Data.match(/=+$/) || [''])[0].length;
-      return Math.floor((base64Data.length * 3) / 4) - padding;
-    } catch (error) {
-      console.error('Error calculating byte size:', error);
-      return 0;
-    }
-  };
-
   // Function to detect contract version based on entrypoints
   const detectContractVersion = (entrypoints) => {
     const v2UniqueEntrypoints = [

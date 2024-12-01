@@ -31,7 +31,6 @@ const MintUpload = ({ onFileChange, onFileDataUrlChange }) => {
 
       // Define size limits
       const RAW_MAX_SIZE = 20 * 1024; // 20KB in bytes
-      const MAX_ESTIMATED_SIZE = Math.ceil((RAW_MAX_SIZE * 4) / 3); // ~26.67KB after encoding
 
       if (file.size > RAW_MAX_SIZE) { // 20KB raw limit
         setSnackbar({

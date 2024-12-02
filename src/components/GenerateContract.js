@@ -1,4 +1,4 @@
-// src/components/GenerateContract.js 
+// mainnet/src/components/GenerateContract.js
 
 import React, { useState, useEffect, useContext } from 'react';
 import styled from 'styled-components';
@@ -533,6 +533,8 @@ const GenerateContract = () => {
           next_token_id: 0,
           operators: operatorsMap,
           token_metadata: tokenMetadataMap,
+          parents: [], // Initialize parents set
+          children: [], // Initialize children set
         };
       } else if (formData.contractVersion === 'v2') {
         storage = {
@@ -655,6 +657,8 @@ const GenerateContract = () => {
           next_token_id: 0,
           operators: operatorsMap,
           token_metadata: tokenMetadataMap,
+          parents: [], // Initialize parents set
+          children: [], // Initialize children set
         };
       } else if (formData.contractVersion === 'v2') {
         storage = {

@@ -1,4 +1,4 @@
-// frontend/src/components/MintBurnTransfer/Mint.js
+// mainnet/src/components/MintBurnTransfer/Mint.js
 
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
@@ -105,6 +105,9 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
     estimatedStorageLimit: null,
     totalEstimatedCostTez: null,
   });
+
+  // State to track successful minting
+  const [mintSuccess, setMintSuccess] = useState(false);
 
   // Handle input changes
   const handleInputChange = (e) => {
@@ -519,6 +522,16 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
       }
     }
 
+    // Ensure the user has agreed to the terms before proceeding
+    if (!agreedToTerms) {
+      setSnackbar({
+        open: true,
+        message: 'You must agree to the terms and conditions before minting.',
+        severity: 'warning',
+      });
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -657,7 +670,7 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
       let mintOperation;
       if (contractVersion === 'v2') {
         mintOperation = contract.methods.mint(parseInt(formData.amount, 10), metadataMap, formData.toAddress);
-      } else {
+      } else if (contractVersion === 'v1') {
         mintOperation = contract.methods.mint(metadataMap, formData.toAddress);
       }
 
@@ -686,6 +699,9 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
         message: 'NFT minted successfully.',
         severity: 'success',
       });
+
+      // Set mintSuccess to true to display contract address section
+      setMintSuccess(true);
 
       // Reset form
       setFormData({
@@ -787,6 +803,9 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
                 maxWidth: '100%',
                 maxHeight: '300px',
                 marginTop: '10px',
+                borderRadius: '8px',
+                objectFit: 'contain', // Prevent image distortion
+                backgroundColor: '#f5f5f5', // Optional: add a background to better visualize images with transparency
               }}
             />
           </Grid>
@@ -958,7 +977,7 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
           variant="contained"
           color="success"
           onClick={handleMintButtonClick}
-          disabled={loading}
+          disabled={loading || !agreedToTerms} // Disable if loading or not agreed
           startIcon={loading && <CircularProgress size={20} />}
           aria-label="Mint NFT"
         >
@@ -995,9 +1014,49 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
           After minting, check OBJKT! ✌️🤟🤘
         </Typography>
       </Section>
-      {/* Step 2: Display Contract Address */}
-      {contractAddress && (
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
+        aria-labelledby="mint-confirmation-dialog"
+      >
+        <DialogTitle id="mint-confirmation-dialog">Confirm Minting</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Please review the estimated fees and gas costs before proceeding with minting your NFT.
+          </DialogContentText>
+          <Typography variant="body2" style={{ marginTop: '10px' }}>
+            <strong>Estimated Fee:</strong> {confirmDialog.estimatedFeeTez} ꜩ{' '}
+            <Tooltip title="The network fee required to process the minting transaction on the Tezos blockchain." arrow>
+              <InfoIcon fontSize="small" style={{ marginLeft: '5px', verticalAlign: 'middle', cursor: 'pointer' }} />
+            </Tooltip>
+          </Typography>
+          <Typography variant="body2">
+            <strong>Estimated Storage Cost:</strong> {confirmDialog.estimatedStorageCostTez} ꜩ{' '}
+            <Tooltip title="The cost for storing your NFT's data and metadata on the blockchain." arrow>
+              <InfoIcon fontSize="small" style={{ marginLeft: '5px', verticalAlign: 'middle', cursor: 'pointer' }} />
+            </Tooltip>
+          </Typography>
+          <Typography variant="body2" style={{ marginTop: '10px' }}>
+            <strong>Total Estimated Cost:</strong> {confirmDialog.totalEstimatedCostTez} ꜩ{' '}
+            <Tooltip title="The sum of the network fee and storage cost required to mint your NFT." arrow>
+              <InfoIcon fontSize="small" style={{ marginLeft: '5px', verticalAlign: 'middle', cursor: 'pointer' }} />
+            </Tooltip>
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDialog({ ...confirmDialog, open: false })} color="secondary">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmMint} color="primary" variant="contained">
+            Confirm Mint
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* Display Contract Address After Successful Minting */}
+      {mintSuccess && (
         <Section>
+          {/* Step 2: Display Contract Address */}
           <Typography variant="h6" gutterBottom>
             Step 2: Your Contract is Deployed
           </Typography>
@@ -1048,45 +1107,6 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
           </Typography>
         </Section>
       )}
-      {/* Confirmation Dialog */}
-      <Dialog
-        open={confirmDialog.open}
-        onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
-        aria-labelledby="mint-confirmation-dialog"
-      >
-        <DialogTitle id="mint-confirmation-dialog">Confirm Minting</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Please review the estimated fees and gas costs before proceeding with minting your NFT.
-          </DialogContentText>
-          <Typography variant="body2" style={{ marginTop: '10px' }}>
-            <strong>Estimated Fee:</strong> {confirmDialog.estimatedFeeTez} ꜩ{' '}
-            <Tooltip title="The network fee required to process the minting transaction on the Tezos blockchain." arrow>
-              <InfoIcon fontSize="small" style={{ marginLeft: '5px', verticalAlign: 'middle', cursor: 'pointer' }} />
-            </Tooltip>
-          </Typography>
-          <Typography variant="body2">
-            <strong>Estimated Storage Cost:</strong> {confirmDialog.estimatedStorageCostTez} ꜩ{' '}
-            <Tooltip title="The cost for storing your NFT's data and metadata on the blockchain." arrow>
-              <InfoIcon fontSize="small" style={{ marginLeft: '5px', verticalAlign: 'middle', cursor: 'pointer' }} />
-            </Tooltip>
-          </Typography>
-          <Typography variant="body2" style={{ marginTop: '10px' }}>
-            <strong>Total Estimated Cost:</strong> {confirmDialog.totalEstimatedCostTez} ꜩ{' '}
-            <Tooltip title="The sum of the network fee and storage cost required to mint your NFT." arrow>
-              <InfoIcon fontSize="small" style={{ marginLeft: '5px', verticalAlign: 'middle', cursor: 'pointer' }} />
-            </Tooltip>
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDialog({ ...confirmDialog, open: false })} color="secondary">
-            Cancel
-          </Button>
-          <Button onClick={handleConfirmMint} color="primary" variant="contained" autoFocus>
-            Confirm Mint
-          </Button>
-        </DialogActions>
-      </Dialog>
       {/* Snackbar for Notifications */}
       <Snackbar
         open={snackbar.open}

@@ -1,4 +1,4 @@
-// src/components/MintBurnTransfer/MintBurnTransfer.js
+// mainnet/src/components/MintBurnTransfer/MintBurnTransfer.js
 
 import React, { useState, useContext } from 'react';
 import styled from 'styled-components';
@@ -10,7 +10,9 @@ import {
   Alert,
   TextField,
   CircularProgress,
-  Link,
+  Grid,
+  Box,
+  Stack,
 } from '@mui/material';
 import { WalletContext } from '../../contexts/WalletContext';
 import Mint from './Mint';
@@ -18,6 +20,7 @@ import Burn from './Burn';
 import Transfer from './Transfer';
 import BalanceOf from './BalanceOf';
 import UpdateOperators from './UpdateOperators';
+import AddRemoveParentChild from './AddRemoveParentChild'; // Import the component
 
 // Styled Components
 const StyledPaper = styled(Paper)`
@@ -26,6 +29,7 @@ const StyledPaper = styled(Paper)`
   max-width: 800px;
   width: 95%;
   box-sizing: border-box;
+  border-radius: 8px;
 
   @media (max-width: 900px) {
     padding: 15px;
@@ -44,10 +48,11 @@ const Disclaimer = styled.div`
   background-color: #fff8e1;
   border-left: 6px solid #ffeb3b;
   box-sizing: border-box;
+  border-radius: 4px;
 `;
 
 const MintBurnTransfer = () => {
-  const { Tezos, isWalletConnected } = useContext(WalletContext);
+  const { Tezos, isWalletConnected } = useContext(WalletContext); // Ensure 'Tezos' is correctly capitalized
   const [contractAddress, setContractAddress] = useState('');
   const [contractMetadata, setContractMetadata] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -55,26 +60,14 @@ const MintBurnTransfer = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
   const [contractVersion, setContractVersion] = useState('');
 
-  // Function to detect contract version based on entrypoints
-  const detectContractVersion = (entrypoints) => {
-    const v2UniqueEntrypoints = [
-      'add_child',
-      'add_parent',
-      'remove_child',
-      'remove_parent',
-    ];
-    
-    // Extract all entrypoint names and convert to lowercase for case-insensitive comparison
-    const entrypointNames = Object.keys(entrypoints).map(ep => ep.toLowerCase());
-    console.log('Entrypoint Names:', entrypointNames);
-    
-    // Identify which unique v2 entrypoints are present
-    const v2EntrypointsPresent = v2UniqueEntrypoints.filter(ep => entrypointNames.includes(ep));
-    
-    console.log(`v2 unique entrypoints present: ${v2EntrypointsPresent.join(', ')}`);
-    
-    // Determine contract version based on the presence of unique v2 entrypoints
-    return v2EntrypointsPresent.length >= 2 ? 'v2' : 'v1';
+  // Function to detect contract version based on storage fields
+  const detectContractVersion = (storage) => {
+    // v2 has 'all_tokens' and 'total_supply' fields
+    if (storage.hasOwnProperty('all_tokens') && storage.hasOwnProperty('total_supply')) {
+      return 'v2';
+    }
+    // Default to v1
+    return 'v1';
   };
 
   // Function to fetch contract metadata and detect version
@@ -86,20 +79,14 @@ const MintBurnTransfer = () => {
     setLoading(true);
     try {
       const contract = await Tezos.contract.at(contractAddress);
-      const entrypointsWrapper = contract.entrypoints; // Access as a property
-      console.log('Entrypoints Wrapper:', entrypointsWrapper);
-      
-      // Correctly access the nested entrypoints object
-      const entrypoints = entrypointsWrapper.entrypoints;
-      console.log('Entrypoints:', entrypoints);
+      const storage = await contract.storage();
 
-      // Detect contract version based on entrypoints
-      const detectedVersion = detectContractVersion(entrypoints);
+      // Detect contract version based on storage fields
+      const detectedVersion = detectContractVersion(storage);
       setContractVersion(detectedVersion);
       console.log(`Detected contract version: ${detectedVersion}`);
 
       // Access the metadata big map
-      const storage = await contract.storage();
       const metadataMap = storage.metadata;
 
       // Retrieve the metadata URI from the big map using the empty string key ''
@@ -155,7 +142,6 @@ const MintBurnTransfer = () => {
 
       setSnackbar({ open: true, message: `Contract metadata loaded (Version: ${detectedVersion}).`, severity: 'success' });
     } catch (error) {
-      // Removed console.error for production
       setSnackbar({ open: true, message: error.message, severity: 'error' });
       setContractVersion('');
       setContractMetadata(null);
@@ -176,161 +162,284 @@ const MintBurnTransfer = () => {
 
   return (
     <StyledPaper elevation={3}>
-      <Typography variant="h5" gutterBottom>
+      <Typography variant="h5" gutterBottom sx={{ fontSize: { xs: '1.25rem', md: '1.5rem' } }}>
         Mint, Burn, and Transfer NFTs
       </Typography>
       <Disclaimer>
-        <Typography variant="body2">
-          <strong>Disclaimer:</strong> This platform is provided "as is" without any warranties.
-          Use at your own risk. Please test thoroughly on{' '}
-          <Link
-            href="https://ghostnet.savetheworldwithart.io"
-            color="primary"
-            underline="hover"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Ghostnet.savetheworldwithart.io
-          </Link>{' '}
-          before deploying to mainnet. This platform works with both single edition (#ZeroContract v1.0) and multiple editions (#ZeroContract v2.0) contracts.
+        <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+          <strong>Disclaimer:</strong> This platform is provided "as is" without any warranties. Use at your own risk.
+          Please test thoroughly on Ghostnet before deploying to mainnet. This platform works with both single edition
+          (#ZeroContract v1.0) and multiple editions (#ZeroContract v2.0) contracts.
         </Typography>
       </Disclaimer>
       {!isWalletConnected ? (
-        <Typography variant="body1">Please connect your wallet to proceed.</Typography>
+        <Typography variant="body1" sx={{ fontSize: { xs: '0.9rem', md: '1rem' } }}>
+          Please connect your wallet to proceed.
+        </Typography>
       ) : (
         <>
-          <TextField
-            label="Contract Address *"
-            value={contractAddress}
-            onChange={(e) => setContractAddress(e.target.value)}
-            fullWidth
-            placeholder="e.g., KT1..."
-            style={{ marginBottom: '20px', marginTop: '20px' }}
-            InputProps={{
-              style: { wordBreak: 'break-all' },
-            }}
-          />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={fetchContractMetadata}
-            disabled={loading}
-            startIcon={loading && <CircularProgress size={20} />}
-            fullWidth={window.innerWidth < 600} // Responsive fullWidth
-            sx={{
-              maxWidth: '300px',
-              margin: '0 auto',
-            }}
-          >
-            {loading ? 'Loading...' : 'Load Contract'}
-          </Button>
+          <Grid container spacing={2} sx={{ mt: 2 }}>
+            <Grid item xs={12}>
+              <TextField
+                label="Contract Address *"
+                value={contractAddress}
+                onChange={(e) => setContractAddress(e.target.value)}
+                fullWidth
+                placeholder="e.g., KT1..."
+                sx={{ mb: 2 }}
+                InputProps={{
+                  style: { wordBreak: 'break-all' },
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={fetchContractMetadata}
+                disabled={loading}
+                startIcon={loading && <CircularProgress size={20} />}
+                fullWidth
+                sx={{
+                  maxWidth: '300px',
+                  margin: '0 auto',
+                }}
+              >
+                {loading ? 'Loading...' : 'Load Contract'}
+              </Button>
+            </Grid>
+          </Grid>
           {contractMetadata && (
             <>
-              <Typography variant="h6" style={{ marginTop: '20px' }}>
-                {contractMetadata.name} (Version: {contractVersion})
-              </Typography>
-              {contractMetadata.imageUri && (
-                <img
-                  src={contractMetadata.imageUri}
-                  alt="Contract Thumbnail"
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '300px',
-                    marginTop: '10px',
-                  }}
-                />
-              )}
-              <Typography variant="body1">{contractMetadata.description}</Typography>
-              <div style={{ marginTop: '20px' }}>
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={() => handleActionClick('mint')}
-                  style={{ marginRight: '10px', marginBottom: '10px' }}
-                  fullWidth={window.innerWidth < 600}
-                  sx={{
-                    maxWidth: '300px',
-                    margin: '0 auto 10px auto',
-                  }}
-                >
-                  Mint
-                </Button>
-                <Typography variant="body2" style={{ marginBottom: '10px' }}>
-                  {contractVersion === 'v2'
-                    ? 'Mint multiple editions of an NFT to a recipient.'
-                    : 'Mint a single edition NFT to a recipient.'}
-                </Typography>
+              {/* Contract Preview Section */}
+              <Grid container spacing={2} sx={{ mt: 2 }}>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="h6" sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
+                    {contractMetadata.name} (Version: {contractVersion})
+                  </Typography>
+                  {contractMetadata.imageUri && (
+                    <Box
+                      component="img"
+                      src={contractMetadata.imageUri}
+                      alt="Contract Thumbnail"
+                      sx={{
+                        width: '100%',
+                        height: 'auto',
+                        maxHeight: { xs: '150px', md: '200px' },
+                        mt: 1,
+                        borderRadius: '8px',
+                        objectFit: 'contain', // Prevent image distortion
+                        backgroundColor: '#f5f5f5', // Optional: add a background to better visualize images with transparency
+                      }}
+                    />
+                  )}
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="body1" sx={{ fontSize: { xs: '0.85rem', md: '1rem' }, mt: { xs: 2, md: 0 } }}>
+                    {contractMetadata.description}
+                  </Typography>
+                </Grid>
+              </Grid>
 
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  onClick={() => handleActionClick('burn')}
-                  style={{ marginRight: '10px', marginBottom: '10px' }}
-                  fullWidth={window.innerWidth < 600}
-                  sx={{
-                    maxWidth: '300px',
-                    margin: '0 auto 10px auto',
-                  }}
-                >
-                  Burn
-                </Button>
-                <Typography variant="body2" style={{ marginBottom: '10px' }}>
-                  {contractVersion === 'v2'
-                    ? 'Burn a specified amount of editions of an NFT.'
-                    : 'Burn a single edition of an NFT.'}
-                </Typography>
+              {/* Action Buttons Section */}
+              <Grid container spacing={2} sx={{ mt: 3 }}>
+                <Grid item xs={12}>
+                  <Stack
+                    direction="column"
+                    spacing={2}
+                    alignItems="center"
+                    sx={{ width: '100%' }}
+                  >
+                    {/* Mint Button and Description */}
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={1}
+                      alignItems="center"
+                      sx={{ width: '100%', maxWidth: '300px' }}
+                    >
+                      <Button
+                        variant="contained"
+                        color="success"
+                        onClick={() => handleActionClick('mint')}
+                        fullWidth
+                        sx={{
+                          fontSize: { xs: '0.875rem', md: '1rem' },
+                        }}
+                      >
+                        Mint
+                      </Button>
+                    </Stack>
+                    <Typography variant="body2" align="center" sx={{ maxWidth: '300px' }}>
+                      {contractVersion === 'v2'
+                        ? 'Mint multiple editions of an NFT to a recipient.'
+                        : 'Mint a single edition NFT to a recipient.'}
+                    </Typography>
 
-                <Button
-                  variant="contained"
-                  color="warning"
-                  onClick={() => handleActionClick('transfer')}
-                  style={{ marginRight: '10px', marginBottom: '10px' }}
-                  fullWidth={window.innerWidth < 600}
-                  sx={{
-                    maxWidth: '300px',
-                    margin: '0 auto 10px auto',
-                  }}
-                >
-                  Transfer
-                </Button>
-                <Typography variant="body2" style={{ marginBottom: '10px' }}>
-                  Transfer NFTs from one address to another.
-                </Typography>
+                    {/* Burn Button and Description */}
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={1}
+                      alignItems="center"
+                      sx={{ width: '100%', maxWidth: '300px' }}
+                    >
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        onClick={() => handleActionClick('burn')}
+                        fullWidth
+                        sx={{
+                          fontSize: { xs: '0.875rem', md: '1rem' },
+                        }}
+                      >
+                        Burn
+                      </Button>
+                    </Stack>
+                    <Typography variant="body2" align="center" sx={{ maxWidth: '300px' }}>
+                      {contractVersion === 'v2'
+                        ? 'Burn a specified amount of editions of an NFT.'
+                        : 'Burn a single edition of an NFT.'}
+                    </Typography>
 
-                <Button
-                  variant="contained"
-                  color="info"
-                  onClick={() => handleActionClick('balance_of')}
-                  style={{ marginRight: '10px', marginBottom: '10px' }}
-                  fullWidth={window.innerWidth < 600}
-                  sx={{
-                    maxWidth: '300px',
-                    margin: '0 auto 10px auto',
-                  }}
-                >
-                  Balance Of
-                </Button>
-                <Typography variant="body2" style={{ marginBottom: '10px' }}>
-                  Check the balance of NFTs for a specific owner and token ID.
-                </Typography>
+                    {/* Transfer Button and Description */}
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={1}
+                      alignItems="center"
+                      sx={{ width: '100%', maxWidth: '300px' }}
+                    >
+                      <Button
+                        variant="contained"
+                        color="warning"
+                        onClick={() => handleActionClick('transfer')}
+                        fullWidth
+                        sx={{
+                          fontSize: { xs: '0.875rem', md: '1rem' },
+                        }}
+                      >
+                        Transfer
+                      </Button>
+                    </Stack>
+                    <Typography variant="body2" align="center" sx={{ maxWidth: '300px' }}>
+                      Transfer NFTs from one address to another.
+                    </Typography>
 
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => handleActionClick('update_operators')}
-                  style={{ marginBottom: '10px' }}
-                  fullWidth={window.innerWidth < 600}
-                  sx={{
-                    maxWidth: '300px',
-                    margin: '0 auto 10px auto',
-                  }}
-                >
-                  Update Operators
-                </Button>
-                <Typography variant="body2" style={{ marginBottom: '10px' }}>
-                  Add or remove operators who can manage your NFTs on your behalf.
-                </Typography>
-              </div>
+                    {/* Balance Of Button and Description */}
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={1}
+                      alignItems="center"
+                      sx={{ width: '100%', maxWidth: '300px' }}
+                    >
+                      <Button
+                        variant="contained"
+                        color="info"
+                        onClick={() => handleActionClick('balance_of')}
+                        fullWidth
+                        sx={{
+                          fontSize: { xs: '0.875rem', md: '1rem' },
+                        }}
+                      >
+                        Balance Of
+                      </Button>
+                    </Stack>
+                    <Typography variant="body2" align="center" sx={{ maxWidth: '300px' }}>
+                      Check the balance of NFTs for a specific owner and token ID.
+                    </Typography>
+
+                    {/* Update Operators Button and Description */}
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={1}
+                      alignItems="center"
+                      sx={{ width: '100%', maxWidth: '300px' }}
+                    >
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => handleActionClick('update_operators')}
+                        fullWidth
+                        sx={{
+                          fontSize: { xs: '0.875rem', md: '1rem' },
+                        }}
+                      >
+                        Update Operators
+                      </Button>
+                    </Stack>
+                    <Typography variant="body2" align="center" sx={{ maxWidth: '300px' }}>
+                      Add or remove operators who can manage your NFTs on your behalf.
+                    </Typography>
+
+                    {/* Add/Remove Parent Buttons */}
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={1}
+                      alignItems="center"
+                      sx={{ width: '100%', maxWidth: '300px' }}
+                    >
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => handleActionClick('add_parent')}
+                        fullWidth
+                        sx={{
+                          fontSize: { xs: '0.875rem', md: '1rem' },
+                        }}
+                      >
+                        Add Parent
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={() => handleActionClick('remove_parent')}
+                        fullWidth
+                        sx={{
+                          fontSize: { xs: '0.875rem', md: '1rem' },
+                        }}
+                      >
+                        Remove Parent
+                      </Button>
+                    </Stack>
+                    <Typography variant="body2" align="center" sx={{ maxWidth: '300px' }}>
+                      Manage parent relationships for your NFTs.
+                    </Typography>
+
+                    {/* Add/Remove Child Buttons */}
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={1}
+                      alignItems="center"
+                      sx={{ width: '100%', maxWidth: '300px' }}
+                    >
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => handleActionClick('add_child')}
+                        fullWidth
+                        sx={{
+                          fontSize: { xs: '0.875rem', md: '1rem' },
+                        }}
+                      >
+                        Add Child
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={() => handleActionClick('remove_child')}
+                        fullWidth
+                        sx={{
+                          fontSize: { xs: '0.875rem', md: '1rem' },
+                        }}
+                      >
+                        Remove Child
+                      </Button>
+                    </Stack>
+                    <Typography variant="body2" align="center" sx={{ maxWidth: '300px' }}>
+                      Manage child relationships for your NFTs.
+                    </Typography>
+                  </Stack>
+                </Grid>
+              </Grid>
+
               {/* Render the selected action component */}
               {action === 'mint' && (
                 <Mint
@@ -372,17 +481,31 @@ const MintBurnTransfer = () => {
                   contractVersion={contractVersion}
                 />
               )}
+              {(action === 'add_parent' || action === 'remove_parent' || action === 'add_child' || action === 'remove_child') && (
+                <AddRemoveParentChild
+                  contractAddress={contractAddress}
+                  Tezos={Tezos}
+                  setSnackbar={setSnackbar}
+                  contractVersion={contractVersion}
+                  actionType={action} // Pass the specific action type
+                />
+              )}
             </>
           )}
         </>
       )}
+      {/* Snackbar for Notifications */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>

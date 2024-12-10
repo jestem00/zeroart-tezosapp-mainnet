@@ -1,4 +1,4 @@
-// src/components/NFTPreview.js
+// mainnet/src/components/NFTPreview.js
 
 import React from 'react';
 import { Typography, Card, CardContent } from '@mui/material';
@@ -10,7 +10,7 @@ const StyledCard = styled(Card)`
   margin-left: auto;
   margin-right: auto;
   box-sizing: border-box;
-  width: 100%; /* Ensure card takes full width of its container */
+  width: 100%;
   
   @media (max-width: 600px) {
     max-width: 90%;
@@ -23,7 +23,10 @@ const CenteredCardContent = styled(CardContent)`
 
 const ResponsiveMedia = styled.div`
   width: 100%;
-  height: auto;
+  display: flex; /* Enables Flexbox */
+  justify-content: center; /* Centers content horizontally */
+  align-items: center; /* Centers content vertically if needed */
+  margin-bottom: 10px; /* Adds space below media */
 
   img,
   video,

@@ -265,7 +265,11 @@ Adding New Fields:
 You can store any new top-level metadata fields (like accessibility, etc.) as metadataMap.set("someField", hexStringOfYourJSON).
 Custom UI:
 Rocky can create or swap out the front-end calls to these entrypoints to tailor the user experience.
+<<<<<<< HEAD
 9. Terms & Conditions
+=======
+# 9. Terms & Conditions
+>>>>>>> d7ac443abb8ef8ef2b87fa20798ec84498930919
 The docs on our terms page outline everything at a high level. For a deeper look, folks can examine:
 
 src/components/MintBurnTransfer/Mint.js (mint logic & metadata handling)

@@ -153,6 +153,9 @@ const GenerateContract = () => {
   // Define the symbol validation regex
   const symbolPattern = /^[A-Za-z0-9]{3,5}$/;
 
+  // Define the authors validation regex
+  const authorsPattern = /^[A-Za-z0-9\s.,'-]+$/;
+
   // Supported Filetypes List
   const supportedFiletypesList = [
     'image/bmp',
@@ -208,11 +211,20 @@ const GenerateContract = () => {
           if (!code.includes('__ADMIN_ADDRESS__')) {
             throw new Error('Michelson code does not contain the placeholder __ADMIN_ADDRESS__.');
           }
-          const cleanWalletAddress = walletAddress.replace(/^"|"$/g, '');
-          code = code.replace(/"__ADMIN_ADDRESS__"/g, `"${cleanWalletAddress}"`);
+          // Ensure correct replacement based on placeholder format
+          // Check if placeholder has quotes or not
+          if (code.includes('"__ADMIN_ADDRESS__"')) {
+            // Placeholder with quotes
+            const cleanWalletAddress = walletAddress.replace(/^"|"$/g, '');
+            code = code.replace(/"__ADMIN_ADDRESS__"/g, `"${cleanWalletAddress}"`);
+          } else {
+            // Placeholder without quotes
+            code = code.replace(/__ADMIN_ADDRESS__/g, `"${walletAddress}"`);
+          }
         }
 
         setMichelsonCode(code);
+        console.log('Fetched Michelson Code:', code);
       } catch (error) {
         console.error('Error fetching Michelson code:', error);
         setSnackbar({ open: true, message: 'Failed to load Michelson code.', severity: 'error' });
@@ -227,73 +239,86 @@ const GenerateContract = () => {
     }
   }, [walletAddress, isWalletConnected, formData.contractVersion]);
 
-  // Handle Input Changes
-  const handleInputChange = (e) => {
-    const { name, value, checked, type } = e.target;
-    const newValue = type === 'checkbox' ? checked : value;
-    setFormData({ ...formData, [name]: newValue });
-
-    // Validate the field
-    validateField(name, newValue);
-  };
-
   // Validate Individual Fields
   const validateField = (fieldName, value) => {
-    let errors = { ...formErrors };
+    let error = '';
 
     switch (fieldName) {
       case 'name':
         if (!value) {
-          errors.name = 'Name is required.';
+          error = 'Name is required.';
         } else if (value.length > 30) {
-          errors.name = 'Name cannot exceed 30 characters.';
-        } else {
-          delete errors.name;
+          error = 'Name cannot exceed 30 characters.';
         }
         break;
 
       case 'description':
         if (!value) {
-          errors.description = 'Description is required.';
+          error = 'Description is required.';
         } else if (value.length > 250) {
-          errors.description = 'Description cannot exceed 250 characters.';
-        } else {
-          delete errors.description;
+          error = 'Description cannot exceed 250 characters.';
         }
         break;
 
       case 'symbol':
         if (!value) {
-          errors.symbol = 'Symbol is required.';
+          error = 'Symbol is required.';
         } else if (value.length < 3) {
-          errors.symbol = 'Symbol must be at least 3 characters.';
+          error = 'Symbol must be at least 3 characters.';
         } else if (value.length > 5) {
-          errors.symbol = 'Symbol cannot exceed 5 characters.';
+          error = 'Symbol cannot exceed 5 characters.';
         } else if (!symbolPattern.test(value)) {
-          errors.symbol = 'Symbol must contain only letters and numbers.';
-        } else {
-          delete errors.symbol;
+          error = 'Symbol must contain only letters and numbers.';
         }
         break;
 
       case 'creators':
         if (!value) {
-          errors.creators = 'Creator(s) are required.';
+          error = 'Creator(s) are required.';
         } else if (value.length > 200) {
-          errors.creators = 'Creator(s) cannot exceed 200 characters.';
+          error = 'Creator(s) cannot exceed 200 characters.';
         } else {
           const creatorsArray = value.split(',').map((c) => c.trim());
           const uniqueCreators = new Set(creatorsArray);
           if (uniqueCreators.size !== creatorsArray.length) {
-            errors.creators = 'Duplicate creators detected.';
+            error = 'Duplicate creators detected.';
           } else {
             for (let addr of creatorsArray) {
               if (!isValidTezosAddress(addr)) {
-                errors.creators = `Invalid Tezos address detected: ${addr}`;
+                error = `Invalid Tezos address detected: ${addr}`;
                 break;
-              } else {
-                delete errors.creators;
               }
+            }
+          }
+        }
+        break;
+
+      case 'authors':
+        if (!value) {
+          error = 'Author(s) are required.';
+        } else if (value.length > 50) {
+          error = 'Author(s) cannot exceed 50 characters.';
+        } else {
+          const authorsArray = value.split(',').map((a) => a.trim());
+          for (let author of authorsArray) {
+            if (!authorsPattern.test(author)) {
+              error = 'Author names can only contain letters, numbers, spaces, and standard punctuation (.,\'-). Emojis and special characters are not allowed.';
+              break;
+            }
+          }
+        }
+        break;
+
+      case 'authorAddresses':
+        const authorsArray = formData.authors.split(',').map((a) => a.trim()).filter((a) => a !== '');
+        const authorAddressesArray = value.split(',').map((a) => a.trim()).filter((a) => a !== '');
+        if (authorsArray.length !== authorAddressesArray.length) {
+          error = 'Number of authors and author addresses must match.';
+        } else {
+          for (let addr of authorAddressesArray) {
+            if (!isValidTezosAddress(addr)) {
+              error = `Invalid Tezos address detected: ${addr}`;
+              break;
             }
           }
         }
@@ -301,23 +326,19 @@ const GenerateContract = () => {
 
       case 'imageUri':
         if (!value) {
-          errors.imageUri = 'Image URI is required.';
+          error = 'Image URI is required.';
         } else {
           const byteSize = getByteSize(value);
           if (byteSize > 20000) {
-            errors.imageUri =
+            error =
               'Image URI must be under 20KB. OBJKT and other platforms may not display thumbnails if it’s too long. Test on Ghostnet first, and compress your image to keep it tiny.';
-          } else {
-            delete errors.imageUri;
           }
         }
         break;
 
       case 'agreeToTerms':
         if (!value) {
-          errors.agreeToTerms = 'You must agree to the terms and conditions.';
-        } else {
-          delete errors.agreeToTerms;
+          error = 'You must agree to the terms and conditions.';
         }
         break;
 
@@ -325,52 +346,50 @@ const GenerateContract = () => {
         break;
     }
 
-    setFormErrors(errors);
+    return error;
   };
 
   // Validate the Entire Form
   const validateForm = () => {
-    const fields = Object.keys(formData);
-    let valid = true;
+    const tempErrors = {};
 
-    fields.forEach((field) => {
-      validateField(field, formData[field]);
-      if (formErrors[field]) {
-        valid = false;
+    // Validate each field and collect errors
+    Object.keys(formData).forEach((field) => {
+      const error = validateField(field, formData[field]);
+      if (error) {
+        tempErrors[field] = error;
       }
     });
 
-    const authors = formData.authors.split(',').map((a) => a.trim()).filter((a) => a !== '');
-    const authorAddresses = formData.authorAddresses.split(',').map((a) => a.trim()).filter((a) => a !== '');
+    // Update the formErrors state once with all errors
+    setFormErrors(tempErrors);
 
-    if (authors.length !== authorAddresses.length) {
-      setFormErrors((prev) => ({
-        ...prev,
-        authorAddresses: 'Number of authors and author addresses must match.',
-      }));
-      valid = false;
-    } else {
-      setFormErrors((prev) => {
-        const { authorAddresses, ...rest } = prev;
-        return rest;
-      });
-    }
+    // Return whether the form is valid (no errors)
+    return Object.keys(tempErrors).length === 0;
+  };
 
-    if (!formData.agreeToTerms) {
-      setFormErrors((prev) => ({
-        ...prev,
-        agreeToTerms: 'You must agree to the terms and conditions.',
-      }));
-      valid = false;
-    }
+  // Handle Input Changes
+  const handleInputChange = (e) => {
+    const { name, value, checked, type } = e.target;
+    const newValue = type === 'checkbox' ? checked : value;
+    setFormData((prev) => ({ ...prev, [name]: newValue }));
 
-    return valid;
+    // Validate the specific field that changed
+    const error = validateField(name, newValue);
+    setFormErrors((prevErrors) => ({
+      ...prevErrors,
+      [name]: error,
+    }));
   };
 
   // Handle Thumbnail Upload
   const handleThumbnailUpload = (dataUri) => {
-    setFormData({ ...formData, imageUri: dataUri });
-    validateField('imageUri', dataUri);
+    setFormData((prev) => ({ ...prev, imageUri: dataUri }));
+    const error = validateField('imageUri', dataUri);
+    setFormErrors((prevErrors) => ({
+      ...prevErrors,
+      imageUri: error,
+    }));
   };
 
   // Prepare Metadata Preview
@@ -566,24 +585,27 @@ const GenerateContract = () => {
           next_token_id: 0,
           operators: operatorsMap,
           token_metadata: tokenMetadataMap,
-          parents: [], // Initialize parents set
-          children: [], // Initialize children set
+          parents: [], // Should be an empty set
+          children: [], // Should be an empty set
         };
       } else if (formData.contractVersion === 'v2') {
         storage = {
           admin: walletAddress, // address
           all_tokens: 0, // nat
-          children: [], // set(address)
+          children: [], // set(address) - should be empty set
           ledger: ledgerMap, // big_map
           metadata: metadataMap, // big_map
           next_token_id: 0, // nat
           operators: operatorsMap, // big_map
-          parents: [], // set(address)
+          parents: [], // set(address) - should be empty set
           paused: false, // bool
           token_metadata: tokenMetadataMap, // big_map
           total_supply: new MichelsonMap(), // big_map(nat, nat)
         };
       }
+
+      // **Debugging: Log Storage Object**
+      console.log('Storage Object for Estimation:', storage);
 
       // Fetch user's balance
       const balanceMutez = await Tezos.tz.getBalance(walletAddress);
@@ -596,16 +618,16 @@ const GenerateContract = () => {
       });
 
       const estimatedFeeMutez = originationEstimation.suggestedFeeMutez;
-      const estimatedGasLimit = originationEstimation.gasLimit;
-      const estimatedStorageLimit = originationEstimation.storageLimit;
+      const estimatedGasLimitLocal = originationEstimation.gasLimit;
+      const estimatedStorageLimitLocal = originationEstimation.storageLimit;
 
       const estimatedFeeTezLocal = new BigNumber(estimatedFeeMutez).dividedBy(1e6).toFixed(6);
       setEstimatedFeeTez(estimatedFeeTezLocal);
-      setEstimatedGasLimit(estimatedGasLimit);
-      setEstimatedStorageLimit(estimatedStorageLimit);
+      setEstimatedGasLimit(estimatedGasLimitLocal);
+      setEstimatedStorageLimit(estimatedStorageLimitLocal);
 
       // Calculate Storage Cost
-      const storageCostTez = new BigNumber(estimatedStorageLimit).multipliedBy(STORAGE_COST_PER_BYTE).toFixed(6);
+      const storageCostTez = new BigNumber(estimatedStorageLimitLocal).multipliedBy(STORAGE_COST_PER_BYTE).toFixed(6);
 
       // Calculate Total Estimated Cost
       const totalEstimatedCostTez = new BigNumber(estimatedFeeTezLocal).plus(storageCostTez).toFixed(6);
@@ -614,6 +636,14 @@ const GenerateContract = () => {
       const estimatedBalanceChange = new BigNumber(totalEstimatedCostTez).negated().toFixed(6); // Negative value
 
       setEstimatedBalanceChangeTez(estimatedBalanceChange);
+
+      // **Debugging: Log Fee Estimates**
+      console.log('Estimated Fee (Tez):', estimatedFeeTezLocal);
+      console.log('Estimated Gas Limit:', estimatedGasLimitLocal);
+      console.log('Estimated Storage Limit:', estimatedStorageLimitLocal);
+      console.log('Storage Cost (Tez):', storageCostTez);
+      console.log('Total Estimated Cost (Tez):', totalEstimatedCostTez);
+      console.log('Estimated Balance Change (Tez):', estimatedBalanceChange);
 
       // Check if the balance is sufficient
       if (balanceTez.isLessThan(totalEstimatedCostTez)) {
@@ -631,8 +661,8 @@ const GenerateContract = () => {
         open: true,
         data: {
           estimatedFeeTez: estimatedFeeTezLocal,
-          estimatedGasLimit: estimatedGasLimit,
-          estimatedStorageLimit: estimatedStorageLimit,
+          estimatedGasLimit: estimatedGasLimitLocal,
+          estimatedStorageLimit: estimatedStorageLimitLocal,
           storageCostTez: storageCostTez, // New field
           estimatedBalanceChangeTez: estimatedBalanceChange,
         },
@@ -690,24 +720,27 @@ const GenerateContract = () => {
           next_token_id: 0,
           operators: operatorsMap,
           token_metadata: tokenMetadataMap,
-          parents: [], // Initialize parents set
-          children: [], // Initialize children set
+          parents: [], // Should be an empty set
+          children: [], // Should be an empty set
         };
       } else if (formData.contractVersion === 'v2') {
         storage = {
           admin: walletAddress, // address
           all_tokens: 0, // nat
-          children: [], // set(address)
+          children: [], // set(address) - should be empty set
           ledger: ledgerMap, // big_map
           metadata: metadataMap, // big_map
           next_token_id: 0, // nat
           operators: operatorsMap, // big_map
-          parents: [], // set(address)
+          parents: [], // set(address) - should be empty set
           paused: false, // bool
           token_metadata: tokenMetadataMap, // big_map
           total_supply: new MichelsonMap(), // big_map(nat, nat)
         };
       }
+
+      // **Debugging: Log Storage Object for Origination**
+      console.log('Storage Object for Origination:', storage);
 
       // Proceed with origination
       const originationOp = await Tezos.wallet
@@ -813,24 +846,6 @@ const GenerateContract = () => {
   const handleCloseContractDialog = () => {
     setContractDialogOpen(false);
   };
-
-  // Real-Time Validation for Authors and Author Addresses
-  useEffect(() => {
-    const authors = formData.authors.split(',').map((a) => a.trim()).filter((a) => a !== '');
-    const authorAddresses = formData.authorAddresses.split(',').map((a) => a.trim()).filter((a) => a !== '');
-
-    if (authors.length !== authorAddresses.length) {
-      setFormErrors((prev) => ({
-        ...prev,
-        authorAddresses: 'Number of authors and author addresses must match.',
-      }));
-    } else {
-      setFormErrors((prev) => {
-        const { authorAddresses, ...rest } = prev;
-        return rest;
-      });
-    }
-  }, [formData.authors, formData.authorAddresses]);
 
   // Handle Before Unload Event to Warn User
   useEffect(() => {
@@ -1002,7 +1017,7 @@ const GenerateContract = () => {
                 inputProps={{
                   maxLength: 50,
                 }}
-                helperText={`${formData.authors.length}/50 characters`}
+                helperText={`${formData.authors.length}/50 characters. Allowed: Letters, numbers, spaces, and standard punctuation (.,'-).`}
                 error={!!formErrors.authors}
                 FormHelperTextProps={{ style: { color: 'red' } }}
               />

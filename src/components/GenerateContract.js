@@ -1,4 +1,4 @@
-// mainnet/src/components/GenerateContract.js
+// src/components/GenerateContract.js
 
 import React, { useState, useEffect, useContext } from 'react';
 import styled from 'styled-components';
@@ -224,7 +224,7 @@ const GenerateContract = () => {
         }
 
         setMichelsonCode(code);
-        console.log('Fetched Michelson Code:', code);
+        //console.log('Fetched Michelson Code:', code);
       } catch (error) {
         console.error('Error fetching Michelson code:', error);
         setSnackbar({ open: true, message: 'Failed to load Michelson code.', severity: 'error' });
@@ -238,6 +238,17 @@ const GenerateContract = () => {
       setMichelsonCode('');
     }
   }, [walletAddress, isWalletConnected, formData.contractVersion]);
+
+  // Helper function to check for invalid control characters without using regex
+  const hasInvalidControlChars = (str) => {
+    for (let i = 0; i < str.length; i++) {
+      const code = str.charCodeAt(i);
+      if ((code >= 0x00 && code <= 0x1F) || (code >= 0x7F && code <= 0x9F)) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   // Validate Individual Fields
   const validateField = (fieldName, value) => {
@@ -257,6 +268,8 @@ const GenerateContract = () => {
           error = 'Description is required.';
         } else if (value.length > 250) {
           error = 'Description cannot exceed 250 characters.';
+        } else if (hasInvalidControlChars(value)) {
+          error = 'Description contains invalid characters.';
         }
         break;
 
@@ -310,12 +323,12 @@ const GenerateContract = () => {
         break;
 
       case 'authorAddresses':
-        const authorsArray = formData.authors.split(',').map((a) => a.trim()).filter((a) => a !== '');
-        const authorAddressesArray = value.split(',').map((a) => a.trim()).filter((a) => a !== '');
-        if (authorsArray.length !== authorAddressesArray.length) {
+        const authorsArr = formData.authors.split(',').map((a) => a.trim()).filter((a) => a !== '');
+        const authorAddressesArr = value.split(',').map((a) => a.trim()).filter((a) => a !== '');
+        if (authorsArr.length !== authorAddressesArr.length) {
           error = 'Number of authors and author addresses must match.';
         } else {
-          for (let addr of authorAddressesArray) {
+          for (let addr of authorAddressesArr) {
             if (!isValidTezosAddress(addr)) {
               error = `Invalid Tezos address detected: ${addr}`;
               break;
@@ -361,17 +374,42 @@ const GenerateContract = () => {
       }
     });
 
-    // Update the formErrors state once with all errors
+    // Additional validation for authors and authorAddresses matching
+    const authorsArray = formData.authors.split(',').map((a) => a.trim()).filter((a) => a !== '');
+    const authorAddressesArray = formData.authorAddresses.split(',').map((a) => a.trim()).filter((a) => a !== '');
+    if (authorsArray.length !== authorAddressesArray.length) {
+      tempErrors.authorAddresses = 'Number of authors and author addresses must match.';
+    }
+
     setFormErrors(tempErrors);
 
     // Return whether the form is valid (no errors)
     return Object.keys(tempErrors).length === 0;
   };
 
-  // Handle Input Changes
+  // Helper Function to Remove Control Characters Without Regex
+  const removeControlChars = (str) => {
+    let sanitizedStr = '';
+    for (let i = 0; i < str.length; i++) {
+      const code = str.charCodeAt(i);
+      if ((code >= 0x20 && code <= 0x7E) || (code >= 0xA0 && code <= 0xFF)) {
+        sanitizedStr += str[i];
+      }
+      // Characters outside these ranges are excluded (i.e., control characters)
+    }
+    return sanitizedStr;
+  };
+
+  // Handle Input Changes with Sanitization for Description
   const handleInputChange = (e) => {
     const { name, value, checked, type } = e.target;
-    const newValue = type === 'checkbox' ? checked : value;
+    let newValue = type === 'checkbox' ? checked : value;
+
+    // Sanitize the description field by removing control characters without regex
+    if (name === 'description' && typeof newValue === 'string') {
+      newValue = removeControlChars(newValue);
+    }
+
     setFormData((prev) => ({ ...prev, [name]: newValue }));
 
     // Validate the specific field that changed
@@ -998,7 +1036,7 @@ const GenerateContract = () => {
                 inputProps={{
                   maxLength: 250,
                 }}
-                helperText={`${formData.description.length}/250 characters`}
+                helperText={`${formData.description.length}/250 characters. Allowed: Letters, numbers, spaces, and standard punctuation (.,!?'"-). Control characters are not allowed.`}
                 error={!!formErrors.description}
                 FormHelperTextProps={{ style: { color: 'red' } }}
               />
@@ -1112,7 +1150,7 @@ const GenerateContract = () => {
               </div>
               {/* Display File Constraints */}
               <Typography variant="caption" color="error" style={{ marginTop: '5px', display: 'block' }}>
-                • Thumbnail must be 1:1 aspect ratio and under 15KB
+                • Thumbnail must be 1:1 aspect ratio and under 20KB
               </Typography>
             </Grid>
 
@@ -1373,7 +1411,11 @@ const GenerateContract = () => {
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>

@@ -49,7 +49,7 @@ const MAX_EDITIONS = 10000; // Maximum editions cap
 // Constants for Tag Validation
 const MAX_TAGS = 10;
 const MAX_TAG_LENGTH = 20;
-const TAG_REGEX = /^[a-zA-Z0-9-_]+$/; // Allowed characters: alphanumeric, hyphens, underscores
+const TAG_REGEX = /^[a-zA-Z0-9-_]+$/; // Allowed characters: alphanumeric, hyphens (-), underscores (_)
 
 // Constant for Royalty Limit
 const MAX_ROYALTIES = 25; // Maximum royalties cap
@@ -322,7 +322,7 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
     if (skippedCount > 0) {
       setSnackbar({
         open: true,
-        message: `Only ${addedCount} tags were added. ${skippedCount} tags were skipped due to validation rules or exceeding the maximum limit.`,
+        message: `Only ${addedCount} tag(s) were added. ${skippedCount} tag(s) were skipped due to validation rules or exceeding the maximum limit.`,
         severity: 'warning',
       });
     }
@@ -330,19 +330,19 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
 
   // Handle tag input changes
   const handleTagInputChange = (e) => {
-    setTagInput(e.target.value);
-  };
+    const { value } = e.target;
+    // Split input by commas
+    const parts = value.split(',');
+    const lastPart = parts.pop(); // The last part is the current incomplete tag
 
-  // Handle tag input key presses
-  const handleTagInputKeyDown = (e) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      if (tagInput) {
-        const newTags = tagInput.split(',').map((t) => t.trim()).filter((t) => t !== '');
-        addTags(newTags);
-        setTagInput('');
-      }
+    // Add all complete tags
+    const newTags = parts.map((t) => t.trim()).filter((t) => t !== '');
+    if (newTags.length > 0) {
+      addTags(newTags);
     }
+
+    // Update the tagInput with the incomplete tag
+    setTagInput(lastPart);
   };
 
   // Handle tag paste
@@ -1135,7 +1135,6 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
             name="tags"
             value={tagInput}
             onChange={handleTagInputChange}
-            onKeyDown={handleTagInputKeyDown}
             onPaste={handleTagPaste}
             fullWidth
             placeholder="Enter tags separated by commas (e.g., art, pixelart, foc)"

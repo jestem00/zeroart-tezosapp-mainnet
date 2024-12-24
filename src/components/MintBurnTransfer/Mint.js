@@ -1,6 +1,6 @@
 // mainnet/src/components/MintBurnTransfer/Mint.js
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import {
   Typography,
@@ -24,6 +24,8 @@ import {
   DialogContentText,
   DialogActions,
   Tooltip, // Import Tooltip
+  Chip,
+  Box,
 } from '@mui/material';
 import { MichelsonMap } from '@taquito/taquito';
 import MintUpload from './MintUpload';
@@ -44,7 +46,12 @@ const MAX_ATTRIBUTE_NAME_LENGTH = 32;
 const MAX_ATTRIBUTE_VALUE_LENGTH = 32;
 const MAX_EDITIONS = 10000; // Maximum editions cap
 
-// New Constant for Royalty Limit
+// Constants for Tag Validation
+const MAX_TAGS = 10;
+const MAX_TAG_LENGTH = 20;
+const TAG_REGEX = /^[a-zA-Z0-9-_]+$/; // Allowed characters: alphanumeric, hyphens, underscores
+
+// Constant for Royalty Limit
 const MAX_ROYALTIES = 25; // Maximum royalties cap
 
 // Helper function to convert string to hex
@@ -78,7 +85,6 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
     name: '',
     description: '',
     creators: '',
-    tags: '',
     toAddress: '',
     royalties: '',
     license: '',
@@ -130,7 +136,12 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
   // State to track successful minting
   const [mintSuccess, setMintSuccess] = useState(false);
 
-  // Handle input changes
+  // State for tags
+  const [tags, setTags] = useState([]);
+  const [tagInput, setTagInput] = useState('');
+  const tagInputRef = useRef(null);
+
+  // Handle input changes for form fields
   const handleInputChange = (e) => {
     const { name, value, checked, type } = e.target;
     let newValue = type === 'checkbox' ? checked : value;
@@ -177,50 +188,54 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
       return;
     }
 
-    const newAttributes = [...attributes];
-    newAttributes[index][field] = value;
+    setAttributes((prevAttributes) => {
+      const newAttributes = [...prevAttributes];
+      newAttributes[index][field] = value;
 
-    // Check for duplicate attribute names
-    if (field === 'name') {
-      const attributeNames = newAttributes.map((attr) => attr.name.trim().toLowerCase());
-      const nameOccurrences = attributeNames.reduce((acc, name) => {
-        acc[name] = (acc[name] || 0) + 1;
-        return acc;
-      }, {});
+      // Check for duplicate attribute names
+      if (field === 'name') {
+        const attributeNames = newAttributes.map((attr) => attr.name.trim().toLowerCase());
+        const nameOccurrences = attributeNames.reduce((acc, name) => {
+          acc[name] = (acc[name] || 0) + 1;
+          return acc;
+        }, {});
 
-      if (
-        newAttributes[index].name &&
-        nameOccurrences[newAttributes[index].name.trim().toLowerCase()] > 1
-      ) {
-        setSnackbar({
-          open: true,
-          message: `Attribute name "${newAttributes[index].name}" is already in use. Please use unique names.`,
-          severity: 'warning',
-        });
-        return;
+        if (
+          newAttributes[index].name &&
+          nameOccurrences[newAttributes[index].name.trim().toLowerCase()] > 1
+        ) {
+          setSnackbar({
+            open: true,
+            message: `Duplicate attribute name "${newAttributes[index].name}" detected. Please use unique names.`,
+            severity: 'warning',
+          });
+          // Optionally, revert the change
+          newAttributes[index][field] = '';
+        }
       }
-    }
 
-    setAttributes(newAttributes);
+      return newAttributes;
+    });
   };
 
   // Add a new attribute
   const addAttribute = () => {
-    if (attributes.length >= MAX_ATTRIBUTES) {
-      setSnackbar({
-        open: true,
-        message: `You can add up to ${MAX_ATTRIBUTES} attributes only.`,
-        severity: 'warning',
-      });
-      return;
-    }
-    setAttributes([...attributes, { name: '', value: '' }]);
+    setAttributes((prevAttributes) => {
+      if (prevAttributes.length >= MAX_ATTRIBUTES) {
+        setSnackbar({
+          open: true,
+          message: `You can add up to ${MAX_ATTRIBUTES} attributes only.`,
+          severity: 'warning',
+        });
+        return prevAttributes;
+      }
+      return [...prevAttributes, { name: '', value: '' }];
+    });
   };
 
   // Remove an attribute
   const removeAttribute = (index) => {
-    const newAttributes = attributes.filter((_, i) => i !== index);
-    setAttributes(newAttributes);
+    setAttributes((prevAttributes) => prevAttributes.filter((_, i) => i !== index));
   };
 
   // Handle file upload
@@ -235,6 +250,113 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
   // Handle agreement checkbox
   const handleAgreementChange = (e) => {
     setAgreedToTerms(e.target.checked);
+  };
+
+  // Function to add a single tag
+  const addTag = (tag) => {
+    const trimmedTag = tag.trim().toLowerCase();
+
+    // Validate tag format
+    if (!TAG_REGEX.test(trimmedTag)) {
+      setSnackbar({
+        open: true,
+        message: `Invalid tag "${tag}". Only alphanumeric characters, hyphens (-), and underscores (_) are allowed.`,
+        severity: 'error',
+      });
+      return false;
+    }
+
+    // Check tag length
+    if (trimmedTag.length > MAX_TAG_LENGTH) {
+      setSnackbar({
+        open: true,
+        message: `Tag "${trimmedTag}" exceeds maximum length of ${MAX_TAG_LENGTH} characters.`,
+        severity: 'error',
+      });
+      return false;
+    }
+
+    // Check for duplicates
+    if (tags.includes(trimmedTag)) {
+      setSnackbar({
+        open: true,
+        message: `Tag "${trimmedTag}" is already added.`,
+        severity: 'warning',
+      });
+      return false;
+    }
+
+    // Check for maximum number of tags
+    if (tags.length >= MAX_TAGS) {
+      setSnackbar({
+        open: true,
+        message: `You can add up to ${MAX_TAGS} tags only.`,
+        severity: 'warning',
+      });
+      return false;
+    }
+
+    // Add tag to the list using functional update
+    setTags((prevTags) => [...prevTags, trimmedTag]);
+    return true;
+  };
+
+  // Function to add multiple tags
+  const addTags = (newTags) => {
+    let addedCount = 0;
+    let skippedCount = 0;
+
+    newTags.forEach((tag) => {
+      if (addedCount >= MAX_TAGS) {
+        skippedCount += 1;
+        return;
+      }
+      const success = addTag(tag);
+      if (success) {
+        addedCount += 1;
+      } else {
+        skippedCount += 1;
+      }
+    });
+
+    if (skippedCount > 0) {
+      setSnackbar({
+        open: true,
+        message: `Only ${addedCount} tags were added. ${skippedCount} tags were skipped due to validation rules or exceeding the maximum limit.`,
+        severity: 'warning',
+      });
+    }
+  };
+
+  // Handle tag input changes
+  const handleTagInputChange = (e) => {
+    setTagInput(e.target.value);
+  };
+
+  // Handle tag input key presses
+  const handleTagInputKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      if (tagInput) {
+        const newTags = tagInput.split(',').map((t) => t.trim()).filter((t) => t !== '');
+        addTags(newTags);
+        setTagInput('');
+      }
+    }
+  };
+
+  // Handle tag paste
+  const handleTagPaste = (e) => {
+    e.preventDefault();
+    const pasteData = e.clipboardData.getData('text');
+    const newTags = pasteData.split(',').map((t) => t.trim()).filter((t) => t !== '');
+    addTags(newTags);
+    setTagInput('');
+  };
+
+  // Remove a tag
+  const removeTag = (tagToRemove) => {
+    setTags((prevTags) => prevTags.filter((tag) => tag !== tagToRemove));
   };
 
   // Function to fetch current minted editions for v2
@@ -274,7 +396,6 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
       name,
       description,
       creators,
-      tags,
       toAddress,
       royalties,
       license,
@@ -324,11 +445,9 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
       metadataMap.set('attributes', '0x' + stringToHex(JSON.stringify(filteredAttributes)));
     }
 
-    if (tags) {
-      metadataMap.set(
-        'tags',
-        '0x' + stringToHex(JSON.stringify(tags.split(',').map((t) => t.trim())))
-      );
+    // Handle tags
+    if (tags.length > 0) {
+      metadataMap.set('tags', '0x' + stringToHex(JSON.stringify(tags)));
     }
 
     // Handle NSFW
@@ -354,13 +473,17 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
 
   // Function to estimate minting fees
   const estimateMintFees = async () => {
-    // Removed destructuring since variables are not used directly
+    // Preliminary checks before estimation
+    if (!artifactFile || !artifactDataUrl || !formData.toAddress.trim()) {
+      // Necessary fields are missing; cannot estimate
+      return null;
+    }
+
     try {
       // Prepare metadata map using the helper function
       const metadataMap = prepareMetadataMap();
 
       console.log('Metadata Map for Estimation:', metadataMap);
-
       const contract = await Tezos.wallet.at(contractAddress);
       console.log('Contract for Estimation:', contract);
 
@@ -408,7 +531,9 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
       console.log(`Estimated Storage Cost: ${estimatedStorageCostTez} ꜩ`);
 
       // Calculate total estimated cost
-      const totalEstimatedCostTez = new BigNumber(estimatedFeeTez).plus(estimatedStorageCostTez).toFixed(6);
+      const totalEstimatedCostTez = new BigNumber(estimatedFeeTez)
+        .plus(estimatedStorageCostTez)
+        .toFixed(6);
 
       // Update estimation state
       setEstimation({
@@ -505,7 +630,7 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
       return;
     }
 
-    // Updated Royalty Validation
+    // Royalty Validation
     if (royaltiesValue < 0 || royaltiesValue > MAX_ROYALTIES) {
       setSnackbar({
         open: true,
@@ -564,6 +689,16 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
       if (attrNameLower) {
         attributeNamesSet.add(attrNameLower);
       }
+    }
+
+    // Validate tags
+    if (tags.length === 0) {
+      setSnackbar({
+        open: true,
+        message: 'Please add at least one tag.',
+        severity: 'warning',
+      });
+      return;
     }
 
     // Validate amount for v2
@@ -721,7 +856,6 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
         name: '',
         description: '',
         creators: '',
-        tags: '',
         toAddress: '',
         royalties: '',
         license: '',
@@ -734,6 +868,8 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
       setArtifactFile(null);
       setArtifactDataUrl(null);
       setAgreedToTerms(false);
+      setTags([]);
+      setTagInput('');
       setEstimation({
         estimatedFeeTez: null,
         estimatedGasLimit: null,
@@ -863,7 +999,9 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
               <MenuItem value="">Select a License</MenuItem>
               <MenuItem value="CC0 (Public Domain)">CC0 (Public Domain)</MenuItem>
               <MenuItem value="All Rights Reserved">All Rights Reserved</MenuItem>
-              <MenuItem value="On-Chain NFT License 2.0 KT1S9GHLCrGg5YwoJGDDuC347bCTikefZQ4z">On-Chain NFT License 2.0 KT1S9GHLCrGg5YwoJGDDuC347bCTikefZQ4z</MenuItem>
+              <MenuItem value="On-Chain NFT License 2.0 KT1S9GHLCrGg5YwoJGDDuC347bCTikefZQ4z">
+                On-Chain NFT License 2.0 KT1S9GHLCrGg5YwoJGDDuC347bCTikefZQ4z
+              </MenuItem>
               <MenuItem value="CC BY 4.0">CC BY 4.0</MenuItem>
               <MenuItem value="CC BY-SA 4.0">CC BY-SA 4.0</MenuItem>
               <MenuItem value="CC BY-ND 4.0">CC BY-ND 4.0</MenuItem>
@@ -972,14 +1110,42 @@ const Mint = ({ contractAddress, Tezos, contractVersion }) => {
         </Grid>
         {/* Tags */}
         <Grid item xs={12}>
+          <Typography variant="body1">Tags *</Typography>
+          <Box
+            component="div"
+            sx={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 0.5,
+              marginTop: '8px',
+            }}
+          >
+            {tags.map((tag, index) => (
+              <Chip
+                key={index}
+                label={tag}
+                onDelete={() => removeTag(tag)}
+                color="primary"
+                variant="outlined"
+              />
+            ))}
+          </Box>
           <TextField
-            label="Tags"
+            label="Add Tags"
             name="tags"
-            value={formData.tags}
-            onChange={handleInputChange}
+            value={tagInput}
+            onChange={handleTagInputChange}
+            onKeyDown={handleTagInputKeyDown}
+            onPaste={handleTagPaste}
             fullWidth
-            placeholder="Comma-separated tags"
+            placeholder="Enter tags separated by commas (e.g., art, pixelart, foc)"
+            inputRef={tagInputRef}
+            sx={{ marginTop: '8px' }}
+            disabled={tags.length >= MAX_TAGS}
           />
+          <Typography variant="caption" color="textSecondary" sx={{ marginTop: '4px', display: 'block' }}>
+            Tags should be alphanumeric and can include hyphens (-) and underscores (_). Maximum {MAX_TAGS} tags, each up to {MAX_TAG_LENGTH} characters.
+          </Typography>
         </Grid>
         {/* Recipient Address */}
         <Grid item xs={12}>

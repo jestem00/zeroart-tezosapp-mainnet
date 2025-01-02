@@ -1,4 +1,4 @@
-// mainnet/src/components/MintBurnTransfer/MintBurnTransfer.js
+// src/components/MintBurnTransfer/MintBurnTransfer.js
 
 import React, { useState, useContext } from 'react';
 import styled from 'styled-components';
@@ -52,7 +52,7 @@ const Disclaimer = styled.div`
 `;
 
 const MintBurnTransfer = () => {
-  const { Tezos, isWalletConnected } = useContext(WalletContext); // Ensure 'Tezos' is correctly capitalized
+  const { Tezos, isWalletConnected } = useContext(WalletContext); // Corrected to 'Tezos'
   const [contractAddress, setContractAddress] = useState('');
   const [contractMetadata, setContractMetadata] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -78,7 +78,7 @@ const MintBurnTransfer = () => {
     }
     setLoading(true);
     try {
-      const contract = await Tezos.contract.at(contractAddress);
+      const contract = await Tezos.contract.at(contractAddress); // Corrected to 'Tezos'
       const storage = await contract.storage();
 
       // Detect contract version based on storage fields
@@ -168,7 +168,7 @@ const MintBurnTransfer = () => {
       <Disclaimer>
         <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
           <strong>Disclaimer:</strong> This platform is provided "as is" without any warranties. Use at your own risk.
-          Please test thoroughly on Ghostnet before deploying to mainnet. This platform works with both single edition
+          Please test thoroughly on Mainnet before deploying to ensure all functionalities work as expected. This platform works with both single edition
           (#ZeroContract v1.0) and multiple editions (#ZeroContract v2.0) contracts.
         </Typography>
       </Disclaimer>
@@ -343,7 +343,7 @@ const MintBurnTransfer = () => {
                       </Button>
                     </Stack>
                     <Typography variant="body2" align="center" sx={{ maxWidth: '300px' }}>
-                      Check the balance of NFTs for a specific owner and token ID.
+                      Check the balance of NFTs for a specific owner.
                     </Typography>
 
                     {/* Update Operators Button and Description */}
@@ -444,7 +444,7 @@ const MintBurnTransfer = () => {
               {action === 'mint' && (
                 <Mint
                   contractAddress={contractAddress}
-                  Tezos={Tezos}
+                  Tezos={Tezos} // Corrected to 'Tezos'
                   setSnackbar={setSnackbar}
                   contractVersion={contractVersion}
                 />
@@ -452,7 +452,7 @@ const MintBurnTransfer = () => {
               {action === 'burn' && (
                 <Burn
                   contractAddress={contractAddress}
-                  Tezos={Tezos}
+                  Tezos={Tezos} // Corrected to 'Tezos'
                   setSnackbar={setSnackbar}
                   contractVersion={contractVersion}
                 />
@@ -460,7 +460,7 @@ const MintBurnTransfer = () => {
               {action === 'transfer' && (
                 <Transfer
                   contractAddress={contractAddress}
-                  Tezos={Tezos}
+                  Tezos={Tezos} // Corrected to 'Tezos'
                   setSnackbar={setSnackbar}
                   contractVersion={contractVersion}
                 />
@@ -468,7 +468,7 @@ const MintBurnTransfer = () => {
               {action === 'balance_of' && (
                 <BalanceOf
                   contractAddress={contractAddress}
-                  Tezos={Tezos}
+                  Tezos={Tezos} // Corrected to 'Tezos'
                   setSnackbar={setSnackbar}
                   contractVersion={contractVersion}
                 />
@@ -476,7 +476,7 @@ const MintBurnTransfer = () => {
               {action === 'update_operators' && (
                 <UpdateOperators
                   contractAddress={contractAddress}
-                  Tezos={Tezos}
+                  Tezos={Tezos} // Corrected to 'Tezos'
                   setSnackbar={setSnackbar}
                   contractVersion={contractVersion}
                 />
@@ -484,7 +484,7 @@ const MintBurnTransfer = () => {
               {(action === 'add_parent' || action === 'remove_parent' || action === 'add_child' || action === 'remove_child') && (
                 <AddRemoveParentChild
                   contractAddress={contractAddress}
-                  Tezos={Tezos}
+                  Tezos={Tezos} // Corrected to 'Tezos'
                   setSnackbar={setSnackbar}
                   contractVersion={contractVersion}
                   actionType={action} // Pass the specific action type
